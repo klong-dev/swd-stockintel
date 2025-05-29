@@ -2,9 +2,9 @@
   <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
 </p>
 
-# Chợ Trò MMO
+# STOCK INTEL
 
-Chợ Trò MMO là một sàn giao dịch sản phẩm MMO (Make Money Online), được xây dựng trên nền tảng [NestJS](https://nestjs.com) để cung cấp một hệ thống hiệu quả và dễ mở rộng cho các ứng dụng phía server.
+STOCK là một nền tảng thu thập dữ liệu và phân tích thông tin chứng khoán chuyên nghiệp, được xây dựng trên nền tảng [NestJS](https://nestjs.com), tích hợp trí tuệ nhân tạo AI mạnh mẽ để cung cấp một hệ thống hiệu quả.
 
 ## Môi trường cấu hình (.env.example)
 
