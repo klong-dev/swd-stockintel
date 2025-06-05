@@ -1,0 +1,29 @@
+name: CI for swd-stockintel
+
+on:
+  push:
+    branches: [dev]
+  pull_request:
+    branches: [dev, main]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: etup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+
+      - name: Install Dependencies
+        run: npm install
+
+      - name: Build
+        run: npm run build
+
+      - name: Test
+        run: npm run test
