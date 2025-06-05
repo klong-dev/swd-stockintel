@@ -14,8 +14,8 @@ Dự án sử dụng tệp `.env` để cấu hình các biến môi trường. 
 APP_PORT=3000
 DATABASE_HOST=localhost
 DATABASE_PORT=5432
-DATABASE_USER=your_database_username
-DATABASE_PASSWORD=your_database_password
+DATABASE_USER=your_username
+DATABASE_PASSWORD=your_password
 DATABASE_NAME=your_database
 JWT_SECRET=your_jwt_secret
 ```
@@ -29,7 +29,7 @@ Hãy sao chép tệp `.env.example` thành `.env` và cập nhật các giá tr�
 $ git clone https://github.com/klong-dev/swd-stockintel.git
 
 # Chuyển vào thư mục dự án
-$ cd swd-stockintel
+$ cd chotroimmo
 
 # Cài đặt các dependencies
 $ npm install
