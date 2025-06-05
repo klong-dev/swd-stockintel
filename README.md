@@ -4,7 +4,7 @@
 
 # STOCK INTEL
 
-STOCK là một nền tảng thu thập dữ liệu và phân tích thông tin chứng khoán chuyên nghiệp, được xây dựng trên nền tảng [NestJS](https://nestjs.com), tích hợp trí tuệ nhân tạo AI mạnh mẽ để cung cấp một hệ thống hiệu quả.
+Stock Intel là một nền tảng thu thập dữ liệu và phân tích thông tin chứng khoán chuyên nghiệp, được xây dựng trên nền tảng [NestJS](https://nestjs.com), tích hợp trí tuệ nhân tạo AI mạnh mẽ để cung cấp một hệ thống hiệu quả.
 
 ## Môi trường cấu hình (.env.example)
 
@@ -26,10 +26,10 @@ Hãy sao chép tệp `.env.example` thành `.env` và cập nhật các giá tr�
 
 ```bash
 # Clone repository
-$ git clone https://github.com/your-repo/chotroimmo.git
+$ git clone https://github.com/klong-dev/swd-stockintel.git
 
 # Chuyển vào thư mục dự án
-$ cd chotroimmo
+$ cd swd-stockintel
 
 # Cài đặt các dependencies
 $ npm install
