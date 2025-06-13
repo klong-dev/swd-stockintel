@@ -1,34 +1,41 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Post, Body } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { CreateAuthDto } from './dto/create-auth.dto';
-import { UpdateAuthDto } from './dto/update-auth.dto';
+import { ApiTags, ApiOperation, ApiBody, ApiResponse } from '@nestjs/swagger';
 
+@ApiTags('Auth')
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(private readonly authService: AuthService) { }
 
-  @Post()
-  create(@Body() createAuthDto: CreateAuthDto) {
-    return this.authService.create(createAuthDto);
+  @ApiOperation({ summary: 'Login with Facebook' })
+  @ApiBody({ schema: { properties: { accessToken: { type: 'string' } } } })
+  @ApiResponse({ status: 200, description: 'Facebook login successful.' })
+  @Post('facebook')
+  facebookLogin(@Body('accessToken') fbToken: string) {
+    return this.authService.facebookLogin(fbToken);
   }
 
-  @Get()
-  findAll() {
-    return this.authService.findAll();
+  @ApiOperation({ summary: 'Login with Google' })
+  @ApiBody({ schema: { properties: { accessToken: { type: 'string' } } } })
+  @ApiResponse({ status: 200, description: 'Google login successful.' })
+  @Post('google')
+  googleLogin(@Body('accessToken') ggToken: string) {
+    return this.authService.googleLogin(ggToken);
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.authService.findOne(+id);
+  @ApiOperation({ summary: 'Register a new user and get JWT token' })
+  @ApiBody({ schema: { properties: { email: { type: 'string' }, password: { type: 'string' }, fullName: { type: 'string' } }, required: ['email', 'password'] } })
+  @ApiResponse({ status: 201, description: 'User registered and JWT token returned.' })
+  @Post('register')
+  async register(@Body() body: { email: string; password: string; fullName?: string }) {
+    return this.authService.register(body.email, body.password, body.fullName);
   }
 
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateAuthDto: UpdateAuthDto) {
-    return this.authService.update(+id, updateAuthDto);
-  }
-
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.authService.remove(+id);
+  @ApiOperation({ summary: 'Login and get JWT token' })
+  @ApiBody({ schema: { properties: { email: { type: 'string' }, password: { type: 'string' } }, required: ['email', 'password'] } })
+  @ApiResponse({ status: 200, description: 'JWT token returned.' })
+  @Post('login')
+  async login(@Body() body: { email: string; password: string }) {
+    return this.authService.login(body.email, body.password);
   }
 }
