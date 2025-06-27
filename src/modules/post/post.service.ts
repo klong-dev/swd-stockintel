@@ -12,34 +12,99 @@ export class PostService {
         private readonly postRepository: Repository<Post>,
     ) { }
 
-    create(createPostDto: CreatePostDto, user: any) {
-        const post = this.postRepository.create({
-            ...createPostDto,
-            expertId: user.userId,
-        });
-        return this.postRepository.save(post);
+    async create(createPostDto: CreatePostDto, user: any) {
+        try {
+            const post = this.postRepository.create({
+                ...createPostDto,
+                expertId: user.userId,
+            });
+            const data = await this.postRepository.save(post);
+            return {
+                error: false,
+                data,
+                message: 'Post created successfully',
+            };
+        } catch (e) {
+            return {
+                error: true,
+                data: null,
+                message: e.message || 'Failed to create post',
+            };
+        }
     }
 
-    findAll() {
-        return this.postRepository.find();
+    async findAll() {
+        try {
+            const data = await this.postRepository.find();
+            return {
+                error: false,
+                data,
+                message: 'All posts fetched successfully',
+            };
+        } catch (e) {
+            return {
+                error: true,
+                data: null,
+                message: e.message || 'Failed to fetch posts',
+            };
+        }
     }
 
-    findOne(id: number) {
-        return this.postRepository.findOne({ where: { postId: id } });
+    async findOne(id: number) {
+        try {
+            const data = await this.postRepository.findOne({ where: { postId: id } });
+            return {
+                error: false,
+                data,
+                message: 'Post fetched successfully',
+            };
+        } catch (e) {
+            return {
+                error: true,
+                data: null,
+                message: e.message || 'Failed to fetch post',
+            };
+        }
     }
 
     async update(id: number, updatePostDto: UpdatePostDto, user: any) {
-        const post = await this.postRepository.findOne({ where: { postId: id } });
-        if (!post) throw new NotFoundException('Post not found');
-        if (post.expertId !== user.userId) throw new ForbiddenException('You can only update your own posts');
-        await this.postRepository.update(id, updatePostDto);
-        return this.findOne(id);
+        try {
+            const post = await this.postRepository.findOne({ where: { postId: id } });
+            if (!post) return { error: true, data: null, message: 'Post not found' };
+            if (post.expertId !== user.userId) return { error: true, data: null, message: 'You can only update your own posts' };
+            await this.postRepository.update(id, updatePostDto);
+            const data = await this.postRepository.findOne({ where: { postId: id } });
+            return {
+                error: false,
+                data,
+                message: 'Post updated successfully',
+            };
+        } catch (e) {
+            return {
+                error: true,
+                data: null,
+                message: e.message || 'Failed to update post',
+            };
+        }
     }
 
     async remove(id: number, user: any) {
-        const post = await this.postRepository.findOne({ where: { postId: id } });
-        if (!post) throw new NotFoundException('Post not found');
-        if (post.expertId !== user.userId) throw new ForbiddenException('You can only delete your own posts');
-        return this.postRepository.delete(id);
+        try {
+            const post = await this.postRepository.findOne({ where: { postId: id } });
+            if (!post) return { error: true, data: null, message: 'Post not found' };
+            if (post.expertId !== user.userId) return { error: true, data: null, message: 'You can only delete your own posts' };
+            const data = await this.postRepository.delete(id);
+            return {
+                error: false,
+                data,
+                message: 'Post deleted successfully',
+            };
+        } catch (e) {
+            return {
+                error: true,
+                data: null,
+                message: e.message || 'Failed to delete post',
+            };
+        }
     }
 }
