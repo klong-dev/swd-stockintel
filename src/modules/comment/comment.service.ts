@@ -5,6 +5,7 @@ import { Comment } from './entities/comment.entity';
 import { CreateCommentDto } from './dto/create-comment.dto';
 import { UpdateCommentDto } from './dto/update-comment.dto';
 import { RedisService } from '../redis/redis.service';
+import { paginate } from '../../utils/pagination';
 
 @Injectable()
 export class CommentService {
@@ -32,42 +33,104 @@ export class CommentService {
     }
 
     async create(createCommentDto: CreateCommentDto) {
-        const comment = this.commentRepository.create(createCommentDto);
-        const saved = await this.commentRepository.save(comment);
-        await this.removeFromCache(`${this.cachePrefix}:all`);
-        await this.removeFromCache(`${this.cachePrefix}:${saved.commentId}`);
-        return saved;
+        try {
+            const comment = this.commentRepository.create(createCommentDto);
+            const saved = await this.commentRepository.save(comment);
+            await this.removeFromCache(`${this.cachePrefix}:all`);
+            await this.removeFromCache(`${this.cachePrefix}:${saved.commentId}`);
+            return {
+                error: false,
+                data: saved,
+                message: 'Comment created successfully',
+            };
+        } catch (e) {
+            return {
+                error: true,
+                data: null,
+                message: e.message || 'Failed to create comment',
+            };
+        }
     }
 
-    async findAll() {
-        const cacheKey = `${this.cachePrefix}:all`;
-        const cached = await this.getFromCache<Comment[]>(cacheKey);
-        if (cached) return cached;
-        const result = await this.commentRepository.find();
-        await this.setToCache(cacheKey, result);
-        return result;
+    async findAll(page: number = 1, pageSize: number = 10): Promise<{ error: boolean; data: any; message: string }> {
+        try {
+            const cacheKey = `${this.cachePrefix}:all`;
+            const cached = await this.getFromCache<Comment[]>(cacheKey);
+            if (cached) return { error: false, data: cached, message: 'Comments fetched from cache' };
+            const data = await this.commentRepository.find();
+            const paginated = paginate(data, page, pageSize);
+            await this.setToCache(cacheKey, data);
+            return {
+                error: false,
+                data: paginated,
+                message: 'All comments fetched successfully',
+            };
+        } catch (e) {
+            return {
+                error: true,
+                data: null,
+                message: e.message || 'Failed to fetch comments',
+            };
+        }
     }
 
     async findOne(id: number) {
-        const cacheKey = `${this.cachePrefix}:${id}`;
-        const cached = await this.getFromCache<Comment>(cacheKey);
-        if (cached) return cached;
-        const result = await this.commentRepository.findOne({ where: { commentId: id } });
-        if (result) await this.setToCache(cacheKey, result);
-        return result;
+        try {
+            const cacheKey = `${this.cachePrefix}:${id}`;
+            const cached = await this.getFromCache<Comment>(cacheKey);
+            if (cached) return { error: false, data: cached, message: 'Comment fetched from cache' };
+            const result = await this.commentRepository.findOne({ where: { commentId: id } });
+            if (result) await this.setToCache(cacheKey, result);
+            return {
+                error: false,
+                data: result,
+                message: result ? 'Comment fetched successfully' : 'Comment not found',
+            };
+        } catch (e) {
+            return {
+                error: true,
+                data: null,
+                message: e.message || 'Failed to fetch comment',
+            };
+        }
     }
 
     async update(id: number, updateCommentDto: UpdateCommentDto) {
-        await this.commentRepository.update(id, updateCommentDto);
-        await this.removeFromCache(`${this.cachePrefix}:all`);
-        await this.removeFromCache(`${this.cachePrefix}:${id}`);
-        return this.findOne(id);
+        try {
+            await this.commentRepository.update(id, updateCommentDto);
+            await this.removeFromCache(`${this.cachePrefix}:all`);
+            await this.removeFromCache(`${this.cachePrefix}:${id}`);
+            const updated = await this.commentRepository.findOne({ where: { commentId: id } });
+            return {
+                error: false,
+                data: updated,
+                message: 'Comment updated successfully',
+            };
+        } catch (e) {
+            return {
+                error: true,
+                data: null,
+                message: e.message || 'Failed to update comment',
+            };
+        }
     }
 
     async remove(id: number) {
-        const result = await this.commentRepository.delete(id);
-        await this.removeFromCache(`${this.cachePrefix}:all`);
-        await this.removeFromCache(`${this.cachePrefix}:${id}`);
-        return result;
+        try {
+            const result = await this.commentRepository.delete(id);
+            await this.removeFromCache(`${this.cachePrefix}:all`);
+            await this.removeFromCache(`${this.cachePrefix}:${id}`);
+            return {
+                error: false,
+                data: result,
+                message: 'Comment deleted successfully',
+            };
+        } catch (e) {
+            return {
+                error: true,
+                data: null,
+                message: e.message || 'Failed to delete comment',
+            };
+        }
     }
 }
