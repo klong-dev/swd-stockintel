@@ -15,27 +15,92 @@ export class UserService {
         private readonly jwtService: JwtService,
     ) { }
 
-    create(createUserDto: CreateUserDto) {
-        const user = this.userRepository.create(createUserDto);
-        return this.userRepository.save(user);
+    async create(createUserDto: CreateUserDto) {
+        try {
+            const user = this.userRepository.create(createUserDto);
+            const data = await this.userRepository.save(user);
+            return {
+                error: false,
+                data,
+                message: 'User created successfully',
+            };
+        } catch (e) {
+            return {
+                error: true,
+                data: null,
+                message: e.message || 'Failed to create user',
+            };
+        }
     }
 
-    findAll() {
-        return this.userRepository.find();
+    async findAll() {
+        try {
+            const data = await this.userRepository.find();
+            return {
+                error: false,
+                data,
+                message: 'All users fetched successfully',
+            };
+        } catch (e) {
+            return {
+                error: true,
+                data: null,
+                message: e.message || 'Failed to fetch users',
+            };
+        }
     }
 
-    findOne(id: number) {
-        return this.userRepository.findOne({ where: { userId: id } });
+    async findOne(id: number) {
+        try {
+            const data = await this.userRepository.findOne({ where: { userId: id } });
+            return {
+                error: false,
+                data,
+                message: 'User fetched successfully',
+            };
+        } catch (e) {
+            return {
+                error: true,
+                data: null,
+                message: e.message || 'Failed to fetch user',
+            };
+        }
     }
 
     async update(id: number, updateUserDto: UpdateUserDto, user: any) {
-        if (user.userId !== id) throw new ForbiddenException('You can only update your own profile');
-        await this.userRepository.update(id, updateUserDto);
-        return this.findOne(id);
+        try {
+            if (user.userId !== id) return { error: true, data: null, message: 'You can only update your own profile' };
+            await this.userRepository.update(id, updateUserDto);
+            const data = await this.userRepository.findOne({ where: { userId: id } });
+            return {
+                error: false,
+                data,
+                message: 'User updated successfully',
+            };
+        } catch (e) {
+            return {
+                error: true,
+                data: null,
+                message: e.message || 'Failed to update user',
+            };
+        }
     }
 
     async remove(id: number, user: any) {
-        if (user.userId !== id) throw new ForbiddenException('You can only delete your own profile');
-        return this.userRepository.delete(id);
+        try {
+            if (user.userId !== id) return { error: true, data: null, message: 'You can only delete your own profile' };
+            const data = await this.userRepository.delete(id);
+            return {
+                error: false,
+                data,
+                message: 'User deleted successfully',
+            };
+        } catch (e) {
+            return {
+                error: true,
+                data: null,
+                message: e.message || 'Failed to delete user',
+            };
+        }
     }
 }
