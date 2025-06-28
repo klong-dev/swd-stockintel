@@ -13,7 +13,28 @@ export class PostController {
 
   @ApiOperation({ summary: 'Create a new post' })
   @ApiBody({ type: CreatePostDto })
-  @ApiResponse({ status: 201, description: 'The post has been successfully created.' })
+  @ApiResponse({
+    status: 201,
+    description: 'Post created.',
+    schema: {
+      example: {
+        error: false,
+        data: { postId: 1, title: 'Post Title', content: 'Post content' },
+        message: 'Post created successfully',
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Failed to create post.',
+    schema: {
+      example: {
+        error: true,
+        data: null,
+        message: 'Failed to create post',
+      },
+    },
+  })
   @UseGuards(JwtAuthGuard)
   @HttpPost()
   create(@Body() createPostDto: CreatePostDto, @Req() req) {
@@ -21,7 +42,35 @@ export class PostController {
   }
 
   @ApiOperation({ summary: 'Get all posts' })
-  @ApiResponse({ status: 200, description: 'List of posts.' })
+  @ApiResponse({
+    status: 200,
+    description: 'All posts fetched successfully',
+    schema: {
+      example: {
+        error: false,
+        data: {
+          items: [
+            { postId: 1, title: 'Post Title', content: 'Post content' }
+          ],
+          total: 1,
+          page: 1,
+          pageSize: 10
+        },
+        message: 'All posts fetched successfully',
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Failed to fetch posts.',
+    schema: {
+      example: {
+        error: true,
+        data: null,
+        message: 'Failed to fetch posts',
+      },
+    },
+  })
   @Get()
   findAll(@Query('page') page: string = '1', @Query('pageSize') pageSize: string = '10') {
     return this.postService.findAll(Number(page), Number(pageSize));
@@ -29,7 +78,28 @@ export class PostController {
 
   @ApiOperation({ summary: 'Get a post by ID' })
   @ApiParam({ name: 'id', type: Number })
-  @ApiResponse({ status: 200, description: 'The found post.' })
+  @ApiResponse({
+    status: 200,
+    description: 'Post fetched successfully',
+    schema: {
+      example: {
+        error: false,
+        data: { postId: 1, title: 'Post Title', content: 'Post content' },
+        message: 'Post fetched successfully',
+      },
+    },
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Post not found.',
+    schema: {
+      example: {
+        error: true,
+        data: null,
+        message: 'Post not found',
+      },
+    },
+  })
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.postService.findOne(+id);
@@ -38,7 +108,39 @@ export class PostController {
   @ApiOperation({ summary: 'Update a post by ID' })
   @ApiParam({ name: 'id', type: Number })
   @ApiBody({ type: UpdatePostDto })
-  @ApiResponse({ status: 200, description: 'The updated post.' })
+  @ApiResponse({
+    status: 200,
+    description: 'Post updated successfully',
+    schema: {
+      example: {
+        error: false,
+        data: { postId: 1, title: 'Post Title', content: 'Post content' },
+        message: 'Post updated successfully',
+      },
+    },
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Post not found.',
+    schema: {
+      example: {
+        error: true,
+        data: null,
+        message: 'Post not found',
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Failed to update post.',
+    schema: {
+      example: {
+        error: true,
+        data: null,
+        message: 'Failed to update post',
+      },
+    },
+  })
   @UseGuards(JwtAuthGuard)
   @Patch(':id')
   update(@Param('id') id: string, @Body() updatePostDto: UpdatePostDto, @Req() req) {
@@ -47,7 +149,39 @@ export class PostController {
 
   @ApiOperation({ summary: 'Delete a post by ID' })
   @ApiParam({ name: 'id', type: Number })
-  @ApiResponse({ status: 200, description: 'The post has been deleted.' })
+  @ApiResponse({
+    status: 200,
+    description: 'Post deleted successfully',
+    schema: {
+      example: {
+        error: false,
+        data: {},
+        message: 'Post deleted successfully',
+      },
+    },
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Post not found.',
+    schema: {
+      example: {
+        error: true,
+        data: null,
+        message: 'Post not found',
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Failed to delete post.',
+    schema: {
+      example: {
+        error: true,
+        data: null,
+        message: 'Failed to delete post',
+      },
+    },
+  })
   @UseGuards(JwtAuthGuard)
   @Delete(':id')
   remove(@Param('id') id: string, @Req() req) {

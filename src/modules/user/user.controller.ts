@@ -13,14 +13,63 @@ export class UserController {
 
   @ApiOperation({ summary: 'Create a new user' })
   @ApiBody({ type: CreateUserDto })
-  @ApiResponse({ status: 201, description: 'User created.' })
+  @ApiResponse({
+    status: 201,
+    description: 'User created.',
+    schema: {
+      example: {
+        error: false,
+        data: { userId: 1, username: 'johndoe', email: 'john@example.com' },
+        message: 'User created successfully',
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Failed to create user.',
+    schema: {
+      example: {
+        error: true,
+        data: null,
+        message: 'Failed to create user',
+      },
+    },
+  })
   @Post()
   create(@Body() createUserDto: CreateUserDto) {
     return this.userService.create(createUserDto);
   }
 
   @ApiOperation({ summary: 'Get all users' })
-  @ApiResponse({ status: 200, description: 'List of users.' })
+  @ApiResponse({
+    status: 200,
+    description: 'All users fetched successfully',
+    schema: {
+      example: {
+        error: false,
+        data: {
+          items: [
+            { userId: 1, username: 'johndoe', email: 'john@example.com' }
+          ],
+          total: 1,
+          page: 1,
+          pageSize: 10
+        },
+        message: 'All users fetched successfully',
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Failed to fetch users.',
+    schema: {
+      example: {
+        error: true,
+        data: null,
+        message: 'Failed to fetch users',
+      },
+    },
+  })
   @Get()
   findAll(@Query('page') page: string = '1', @Query('pageSize') pageSize: string = '10') {
     return this.userService.findAll(Number(page), Number(pageSize));
@@ -28,7 +77,28 @@ export class UserController {
 
   @ApiOperation({ summary: 'Get user by ID' })
   @ApiParam({ name: 'id', type: Number })
-  @ApiResponse({ status: 200, description: 'User found.' })
+  @ApiResponse({
+    status: 200,
+    description: 'User fetched successfully',
+    schema: {
+      example: {
+        error: false,
+        data: { userId: 1, username: 'johndoe', email: 'john@example.com' },
+        message: 'User fetched successfully',
+      },
+    },
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'User not found.',
+    schema: {
+      example: {
+        error: true,
+        data: null,
+        message: 'User not found',
+      },
+    },
+  })
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.userService.findOne(+id);
@@ -37,7 +107,39 @@ export class UserController {
   @ApiOperation({ summary: 'Update user by ID' })
   @ApiParam({ name: 'id', type: Number })
   @ApiBody({ type: UpdateUserDto })
-  @ApiResponse({ status: 200, description: 'User updated.' })
+  @ApiResponse({
+    status: 200,
+    description: 'User updated successfully',
+    schema: {
+      example: {
+        error: false,
+        data: { userId: 1, username: 'johndoe', email: 'john@example.com' },
+        message: 'User updated successfully',
+      },
+    },
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'User not found.',
+    schema: {
+      example: {
+        error: true,
+        data: null,
+        message: 'User not found',
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Failed to update user.',
+    schema: {
+      example: {
+        error: true,
+        data: null,
+        message: 'Failed to update user',
+      },
+    },
+  })
   @UseGuards(JwtAuthGuard)
   @Patch(':id')
   update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto, @Req() req) {
@@ -46,7 +148,39 @@ export class UserController {
 
   @ApiOperation({ summary: 'Delete user by ID' })
   @ApiParam({ name: 'id', type: Number })
-  @ApiResponse({ status: 200, description: 'User deleted.' })
+  @ApiResponse({
+    status: 200,
+    description: 'User deleted successfully',
+    schema: {
+      example: {
+        error: false,
+        data: {},
+        message: 'User deleted successfully',
+      },
+    },
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'User not found.',
+    schema: {
+      example: {
+        error: true,
+        data: null,
+        message: 'User not found',
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Failed to delete user.',
+    schema: {
+      example: {
+        error: true,
+        data: null,
+        message: 'Failed to delete user',
+      },
+    },
+  })
   @UseGuards(JwtAuthGuard)
   @Delete(':id')
   remove(@Param('id') id: string, @Req() req) {

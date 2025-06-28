@@ -13,7 +13,28 @@ export class StockExchangeController {
 
   @ApiOperation({ summary: 'Create a new stock exchange' })
   @ApiBody({ type: CreateStockExchangeDto })
-  @ApiResponse({ status: 201, description: 'Stock exchange created.' })
+  @ApiResponse({
+    status: 201,
+    description: 'Stock exchange created.',
+    schema: {
+      example: {
+        error: false,
+        data: { stockExchangeId: 1, name: 'HOSE', country: 'Vietnam' },
+        message: 'Stock exchange created successfully',
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Failed to create stock exchange.',
+    schema: {
+      example: {
+        error: true,
+        data: null,
+        message: 'Failed to create stock exchange',
+      },
+    },
+  })
   @UseGuards(JwtAuthGuard)
   @Post()
   create(@Body() createStockExchangeDto: CreateStockExchangeDto) {
@@ -21,7 +42,35 @@ export class StockExchangeController {
   }
 
   @ApiOperation({ summary: 'Get all stock exchanges' })
-  @ApiResponse({ status: 200, description: 'List of stock exchanges.' })
+  @ApiResponse({
+    status: 200,
+    description: 'All stock exchanges fetched successfully',
+    schema: {
+      example: {
+        error: false,
+        data: {
+          items: [
+            { stockExchangeId: 1, name: 'HOSE', country: 'Vietnam' }
+          ],
+          total: 1,
+          page: 1,
+          pageSize: 10
+        },
+        message: 'All stock exchanges fetched successfully',
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Failed to fetch stock exchanges.',
+    schema: {
+      example: {
+        error: true,
+        data: null,
+        message: 'Failed to fetch stock exchanges',
+      },
+    },
+  })
   @Get()
   findAll(@Query('page') page: string = '1', @Query('pageSize') pageSize: string = '10') {
     return this.stockExchangeService.findAll(Number(page), Number(pageSize));
@@ -29,7 +78,28 @@ export class StockExchangeController {
 
   @ApiOperation({ summary: 'Get stock exchange by ID' })
   @ApiParam({ name: 'id', type: Number })
-  @ApiResponse({ status: 200, description: 'Stock exchange found.' })
+  @ApiResponse({
+    status: 200,
+    description: 'Stock exchange fetched successfully',
+    schema: {
+      example: {
+        error: false,
+        data: { stockExchangeId: 1, name: 'HOSE', country: 'Vietnam' },
+        message: 'Stock exchange fetched successfully',
+      },
+    },
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Stock exchange not found.',
+    schema: {
+      example: {
+        error: true,
+        data: null,
+        message: 'Stock exchange not found',
+      },
+    },
+  })
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.stockExchangeService.findOne(+id);
@@ -38,7 +108,39 @@ export class StockExchangeController {
   @ApiOperation({ summary: 'Update stock exchange by ID' })
   @ApiParam({ name: 'id', type: Number })
   @ApiBody({ type: UpdateStockExchangeDto })
-  @ApiResponse({ status: 200, description: 'Stock exchange updated.' })
+  @ApiResponse({
+    status: 200,
+    description: 'Stock exchange updated successfully',
+    schema: {
+      example: {
+        error: false,
+        data: { stockExchangeId: 1, name: 'HOSE', country: 'Vietnam' },
+        message: 'Stock exchange updated successfully',
+      },
+    },
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Stock exchange not found.',
+    schema: {
+      example: {
+        error: true,
+        data: null,
+        message: 'Stock exchange not found',
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Failed to update stock exchange.',
+    schema: {
+      example: {
+        error: true,
+        data: null,
+        message: 'Failed to update stock exchange',
+      },
+    },
+  })
   @UseGuards(JwtAuthGuard)
   @Patch(':id')
   update(@Param('id') id: string, @Body() updateStockExchangeDto: UpdateStockExchangeDto) {
@@ -47,7 +149,39 @@ export class StockExchangeController {
 
   @ApiOperation({ summary: 'Delete stock exchange by ID' })
   @ApiParam({ name: 'id', type: Number })
-  @ApiResponse({ status: 200, description: 'Stock exchange deleted.' })
+  @ApiResponse({
+    status: 200,
+    description: 'Stock exchange deleted successfully',
+    schema: {
+      example: {
+        error: false,
+        data: {},
+        message: 'Stock exchange deleted successfully',
+      },
+    },
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Stock exchange not found.',
+    schema: {
+      example: {
+        error: true,
+        data: null,
+        message: 'Stock exchange not found',
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Failed to delete stock exchange.',
+    schema: {
+      example: {
+        error: true,
+        data: null,
+        message: 'Failed to delete stock exchange',
+      },
+    },
+  })
   @UseGuards(JwtAuthGuard)
   @Delete(':id')
   remove(@Param('id') id: string) {
