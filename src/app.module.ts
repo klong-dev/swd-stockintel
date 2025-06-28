@@ -15,8 +15,8 @@ import { StockModule } from './modules/stock/stock.module';
 import { StockCrawlDataModule } from './modules/stock-crawl-data/stock-crawl-data.module';
 import { StockExchangeModule } from './modules/stock-exchange/stock-exchange.module';
 import { UserModule } from './modules/user/user.module';
-import { RedisProvider } from './configs/redis.provider';
 import { RedisModule } from './modules/redis/redis.module';
+import { CloudinaryModule } from './modules/cloudinary/cloudinary.module';
 
 
 @Module({
@@ -40,9 +40,10 @@ import { RedisModule } from './modules/redis/redis.module';
     StockCrawlDataModule,
     StockExchangeModule,
     UserModule,
-    RedisModule
+    RedisModule,
+    CloudinaryModule
   ],
   controllers: [AppController],
-  providers: [RedisProvider, AppService],
+  providers: [AppService],
 })
 export class AppModule { }
