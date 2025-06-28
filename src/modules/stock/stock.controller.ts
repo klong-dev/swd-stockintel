@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Query } from '@nestjs/common';
 import { StockService } from './stock.service';
 import { CreateStockDto } from './dto/create-stock.dto';
 import { UpdateStockDto } from './dto/update-stock.dto';
@@ -23,8 +23,8 @@ export class StockController {
   @ApiOperation({ summary: 'Get all stocks' })
   @ApiResponse({ status: 200, description: 'List of stocks.' })
   @Get()
-  findAll() {
-    return this.stockService.findAll();
+  findAll(@Query('page') page: string = '1', @Query('pageSize') pageSize: string = '10') {
+    return this.stockService.findAll(Number(page), Number(pageSize));
   }
 
   @ApiOperation({ summary: 'Get stock by ID' })

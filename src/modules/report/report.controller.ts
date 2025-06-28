@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Req } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Req, Query } from '@nestjs/common';
 import { ReportService } from './report.service';
 import { CreateReportDto } from './dto/create-report.dto';
 import { UpdateReportDto } from './dto/update-report.dto';
@@ -23,8 +23,8 @@ export class ReportController {
   @ApiOperation({ summary: 'Get all reports' })
   @ApiResponse({ status: 200, description: 'List of reports.' })
   @Get()
-  findAll() {
-    return this.reportService.findAll();
+  findAll(@Query('page') page: string = '1', @Query('pageSize') pageSize: string = '10') {
+    return this.reportService.findAll(Number(page), Number(pageSize));
   }
 
   @ApiOperation({ summary: 'Get report by ID' })

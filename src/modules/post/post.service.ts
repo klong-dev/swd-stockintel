@@ -5,6 +5,7 @@ import { Post } from './entities/post.entity';
 import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
 import { RedisService } from 'src/modules/redis/redis.service';
+import { paginate } from '../../utils/pagination';
 
 @Injectable()
 export class PostService {
@@ -51,12 +52,13 @@ export class PostService {
         }
     }
 
-    async findAll() {
+    async findAll(page: number = 1, pageSize: number = 10): Promise<{ error: boolean; data: any; message: string }> {
         try {
             const data = await this.postRepository.find();
+            const paginated = paginate(data, page, pageSize);
             return {
                 error: false,
-                data,
+                data: paginated,
                 message: 'All posts fetched successfully',
             };
         } catch (e) {

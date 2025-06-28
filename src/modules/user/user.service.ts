@@ -6,6 +6,7 @@ import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
+import { paginate, PaginationResult } from '../../utils/pagination';
 
 @Injectable()
 export class UserService {
@@ -33,12 +34,13 @@ export class UserService {
         }
     }
 
-    async findAll() {
+    async findAll(page: number = 1, pageSize: number = 10): Promise<{ error: boolean; data: any; message: string }> {
         try {
-            const data = await this.userRepository.find();
+            const users = await this.userRepository.find();
+            const paginated = paginate(users, page, pageSize);
             return {
                 error: false,
-                data,
+                data: paginated,
                 message: 'All users fetched successfully',
             };
         } catch (e) {

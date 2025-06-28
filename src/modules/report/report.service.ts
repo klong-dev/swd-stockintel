@@ -5,6 +5,7 @@ import { Report } from './entities/report.entity';
 import { CreateReportDto } from './dto/create-report.dto';
 import { UpdateReportDto } from './dto/update-report.dto';
 import { RedisService } from 'src/modules/redis/redis.service';
+import { paginate } from '../../utils/pagination';
 
 @Injectable()
 export class ReportService {
@@ -51,12 +52,13 @@ export class ReportService {
         }
     }
 
-    async findAll() {
+    async findAll(page: number = 1, pageSize: number = 10): Promise<{ error: boolean; data: any; message: string }> {
         try {
             const data = await this.reportRepository.find();
+            const paginated = paginate(data, page, pageSize);
             return {
                 error: false,
-                data,
+                data: paginated,
                 message: 'All reports fetched successfully',
             };
         } catch (e) {

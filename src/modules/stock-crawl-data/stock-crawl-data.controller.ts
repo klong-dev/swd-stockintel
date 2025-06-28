@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Query } from '@nestjs/common';
 import { StockCrawlDataService } from './stock-crawl-data.service';
 import { CreateStockCrawlDataDto } from './dto/create-stock-crawl-data.dto';
 import { UpdateStockCrawlDataDto } from './dto/update-stock-crawl-data.dto';
@@ -23,8 +23,8 @@ export class StockCrawlDataController {
   @ApiOperation({ summary: 'Get all stock crawl data' })
   @ApiResponse({ status: 200, description: 'List of stock crawl data.' })
   @Get()
-  findAll() {
-    return this.stockCrawlDataService.findAll();
+  findAll(@Query('page') page: string = '1', @Query('pageSize') pageSize: string = '10') {
+    return this.stockCrawlDataService.findAll(Number(page), Number(pageSize));
   }
 
   @ApiOperation({ summary: 'Get stock crawl data by ID' })

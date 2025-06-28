@@ -5,6 +5,7 @@ import { StockCrawlData } from './entities/stock-crawl-data.entity';
 import { CreateStockCrawlDataDto } from './dto/create-stock-crawl-data.dto';
 import { UpdateStockCrawlDataDto } from './dto/update-stock-crawl-data.dto';
 import { RedisService } from 'src/modules/redis/redis.service';
+import { paginate } from '../../utils/pagination';
 
 @Injectable()
 export class StockCrawlDataService {
@@ -48,12 +49,13 @@ export class StockCrawlDataService {
         }
     }
 
-    async findAll() {
+    async findAll(page: number = 1, pageSize: number = 10): Promise<{ error: boolean; data: any; message: string }> {
         try {
             const data = await this.stockCrawlDataRepository.find();
+            const paginated = paginate(data, page, pageSize);
             return {
                 error: false,
-                data,
+                data: paginated,
                 message: 'All stock crawl data fetched successfully',
             };
         } catch (e) {

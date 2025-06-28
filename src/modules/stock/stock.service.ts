@@ -5,6 +5,7 @@ import { Stock } from './entities/stock.entity';
 import { CreateStockDto } from './dto/create-stock.dto';
 import { UpdateStockDto } from './dto/update-stock.dto';
 import { RedisService } from 'src/modules/redis/redis.service';
+import { paginate } from '../../utils/pagination';
 
 @Injectable()
 export class StockService {
@@ -48,12 +49,13 @@ export class StockService {
         }
     }
 
-    async findAll() {
+    async findAll(page: number = 1, pageSize: number = 10): Promise<{ error: boolean; data: any; message: string }> {
         try {
             const data = await this.stockRepository.find();
+            const paginated = paginate(data, page, pageSize);
             return {
                 error: false,
-                data,
+                data: paginated,
                 message: 'All stocks fetched successfully',
             };
         } catch (e) {

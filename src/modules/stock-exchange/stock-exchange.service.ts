@@ -5,6 +5,7 @@ import { StockExchange } from './entities/stock-exchange.entity';
 import { CreateStockExchangeDto } from './dto/create-stock-exchange.dto';
 import { UpdateStockExchangeDto } from './dto/update-stock-exchange.dto';
 import { RedisService } from 'src/modules/redis/redis.service';
+import { paginate } from '../../utils/pagination';
 
 @Injectable()
 export class StockExchangeService {
@@ -48,12 +49,13 @@ export class StockExchangeService {
         }
     }
 
-    async findAll() {
+    async findAll(page: number = 1, pageSize: number = 10): Promise<{ error: boolean; data: any; message: string }> {
         try {
             const data = await this.stockExchangeRepository.find();
+            const paginated = paginate(data, page, pageSize);
             return {
                 error: false,
-                data,
+                data: paginated,
                 message: 'All stock exchanges fetched successfully',
             };
         } catch (e) {

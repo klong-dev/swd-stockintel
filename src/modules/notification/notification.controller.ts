@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Req } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Req, Query } from '@nestjs/common';
 import { NotificationService } from './notification.service';
 import { CreateNotificationDto } from './dto/create-notification.dto';
 import { UpdateNotificationDto } from './dto/update-notification.dto';
@@ -23,8 +23,8 @@ export class NotificationController {
   @ApiOperation({ summary: 'Get all notifications' })
   @ApiResponse({ status: 200, description: 'List of notifications.' })
   @Get()
-  findAll() {
-    return this.notificationService.findAll();
+  findAll(@Query('page') page: string = '1', @Query('pageSize') pageSize: string = '10') {
+    return this.notificationService.findAll(Number(page), Number(pageSize));
   }
 
   @ApiOperation({ summary: 'Get notification by ID' })

@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Req } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Req, Query } from '@nestjs/common';
 import { CommentService } from './comment.service';
 import { CreateCommentDto } from './dto/create-comment.dto';
 import { UpdateCommentDto } from './dto/update-comment.dto';
@@ -23,8 +23,8 @@ export class CommentController {
   @ApiOperation({ summary: 'Get all comments' })
   @ApiResponse({ status: 200, description: 'List of comments.' })
   @Get()
-  findAll() {
-    return this.commentService.findAll();
+  findAll(@Query('page') page: string = '1', @Query('pageSize') pageSize: string = '10') {
+    return this.commentService.findAll(Number(page), Number(pageSize));
   }
 
   @ApiOperation({ summary: 'Get comment by ID' })

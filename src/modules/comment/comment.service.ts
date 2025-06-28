@@ -5,6 +5,7 @@ import { Comment } from './entities/comment.entity';
 import { CreateCommentDto } from './dto/create-comment.dto';
 import { UpdateCommentDto } from './dto/update-comment.dto';
 import { RedisService } from '../redis/redis.service';
+import { paginate } from '../../utils/pagination';
 
 @Injectable()
 export class CommentService {
@@ -51,16 +52,17 @@ export class CommentService {
         }
     }
 
-    async findAll() {
+    async findAll(page: number = 1, pageSize: number = 10): Promise<{ error: boolean; data: any; message: string }> {
         try {
             const cacheKey = `${this.cachePrefix}:all`;
             const cached = await this.getFromCache<Comment[]>(cacheKey);
             if (cached) return { error: false, data: cached, message: 'Comments fetched from cache' };
-            const result = await this.commentRepository.find();
-            await this.setToCache(cacheKey, result);
+            const data = await this.commentRepository.find();
+            const paginated = paginate(data, page, pageSize);
+            await this.setToCache(cacheKey, data);
             return {
                 error: false,
-                data: result,
+                data: paginated,
                 message: 'All comments fetched successfully',
             };
         } catch (e) {

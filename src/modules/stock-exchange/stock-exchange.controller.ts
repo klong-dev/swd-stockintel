@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Query } from '@nestjs/common';
 import { StockExchangeService } from './stock-exchange.service';
 import { CreateStockExchangeDto } from './dto/create-stock-exchange.dto';
 import { UpdateStockExchangeDto } from './dto/update-stock-exchange.dto';
@@ -23,8 +23,8 @@ export class StockExchangeController {
   @ApiOperation({ summary: 'Get all stock exchanges' })
   @ApiResponse({ status: 200, description: 'List of stock exchanges.' })
   @Get()
-  findAll() {
-    return this.stockExchangeService.findAll();
+  findAll(@Query('page') page: string = '1', @Query('pageSize') pageSize: string = '10') {
+    return this.stockExchangeService.findAll(Number(page), Number(pageSize));
   }
 
   @ApiOperation({ summary: 'Get stock exchange by ID' })
