@@ -29,7 +29,7 @@ Hãy sao chép tệp `.env.example` thành `.env` và cập nhật các giá tr�
 $ git clone https://github.com/klong-dev/swd-stockintel.git
 
 # Chuyển vào thư mục dự án
-$ cd chotroimmo
+$ cd swd-stockintel
 
 # Cài đặt các dependencies
 $ npm install
