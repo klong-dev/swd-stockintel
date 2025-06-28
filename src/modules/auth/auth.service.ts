@@ -8,6 +8,7 @@ import { Repository } from 'typeorm';
 import { User } from '../user/entities/user.entity';
 import * as bcrypt from 'bcrypt';
 import { RedisService } from 'src/modules/redis/redis.service';
+import { v4 as uuidv4 } from 'uuid';
 
 @Injectable()
 export class AuthService {
@@ -87,9 +88,10 @@ export class AuthService {
     const existing = await this.userRepository.findOne({ where: { email } });
     if (existing) throw new ConflictException('Email already registered');
     const passwordHash = password ? await bcrypt.hash(password, 10) : null;
-    const user = this.userRepository.create({ email, passwordHash, fullName });
+    const refreshToken = uuidv4();
+    const user = this.userRepository.create({ email, passwordHash, fullName, refreshToken });
     await this.userRepository.save(user);
-    return this.generateToken(user);
+    return this.generateToken(user, refreshToken);
   }
 
   async login(email: string, password: string) {
@@ -97,13 +99,23 @@ export class AuthService {
     if (!user || !user.passwordHash || !(await bcrypt.compare(password, user.passwordHash))) {
       throw new UnauthorizedException('Invalid credentials');
     }
-    return this.generateToken(user);
+    const refreshToken = uuidv4();
+    user.refreshToken = refreshToken;
+    await this.userRepository.save(user);
+    return this.generateToken(user, refreshToken);
   }
 
-  private generateToken(user: User) {
+  async refreshToken(refreshToken: string) {
+    const user = await this.userRepository.findOne({ where: { refreshToken } });
+    if (!user) throw new UnauthorizedException('Invalid refresh token');
+    return this.generateToken(user, refreshToken);
+  }
+
+  private generateToken(user: User, refreshToken?: string) {
     const payload = { userId: user.userId, email: user.email, isExpert: user.isExpert };
     return {
       access_token: this.jwtService.sign(payload),
+      refresh_token: refreshToken || user.refreshToken,
       user: payload,
     };
   }
