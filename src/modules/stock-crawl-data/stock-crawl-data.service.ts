@@ -4,13 +4,31 @@ import { Repository } from 'typeorm';
 import { StockCrawlData } from './entities/stock-crawl-data.entity';
 import { CreateStockCrawlDataDto } from './dto/create-stock-crawl-data.dto';
 import { UpdateStockCrawlDataDto } from './dto/update-stock-crawl-data.dto';
+import { RedisService } from 'src/modules/redis/redis.service';
 
 @Injectable()
 export class StockCrawlDataService {
+    private readonly redis;
     constructor(
         @InjectRepository(StockCrawlData)
         private readonly stockCrawlDataRepository: Repository<StockCrawlData>,
-    ) { }
+        private readonly redisService: RedisService,
+    ) {
+        this.redis = this.redisService.getClient();
+    }
+
+    private async getFromCache<T>(key: string): Promise<T | null> {
+        const data = await this.redis.get(key);
+        return data ? JSON.parse(data) : null;
+    }
+
+    private async setToCache(key: string, value: any, ttl = 60): Promise<void> {
+        await this.redis.set(key, JSON.stringify(value), 'EX', ttl);
+    }
+
+    private async removeFromCache(key: string): Promise<void> {
+        await this.redis.del(key);
+    }
 
     create(createStockCrawlDataDto: CreateStockCrawlDataDto) {
         const entity = this.stockCrawlDataRepository.create(createStockCrawlDataDto);

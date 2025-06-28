@@ -4,13 +4,31 @@ import { Repository } from 'typeorm';
 import { Stock } from './entities/stock.entity';
 import { CreateStockDto } from './dto/create-stock.dto';
 import { UpdateStockDto } from './dto/update-stock.dto';
+import { RedisService } from 'src/modules/redis/redis.service';
 
 @Injectable()
 export class StockService {
+    private readonly redis;
     constructor(
         @InjectRepository(Stock)
         private readonly stockRepository: Repository<Stock>,
-    ) { }
+        private readonly redisService: RedisService,
+    ) {
+        this.redis = this.redisService.getClient();
+    }
+
+    private async getFromCache<T>(key: string): Promise<T | null> {
+        const data = await this.redis.get(key);
+        return data ? JSON.parse(data) : null;
+    }
+
+    private async setToCache(key: string, value: any, ttl = 60): Promise<void> {
+        await this.redis.set(key, JSON.stringify(value), 'EX', ttl);
+    }
+
+    private async removeFromCache(key: string): Promise<void> {
+        await this.redis.del(key);
+    }
 
     create(createStockDto: CreateStockDto) {
         const stock = this.stockRepository.create(createStockDto);
