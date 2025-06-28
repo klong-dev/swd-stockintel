@@ -2,7 +2,6 @@ import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { UsersModule } from './modules/users/users.module';
 import { AuthModule } from './modules/auth/auth.module';
 import typeormConfig from './configs/typeorm.config';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -16,6 +15,8 @@ import { StockModule } from './modules/stock/stock.module';
 import { StockCrawlDataModule } from './modules/stock-crawl-data/stock-crawl-data.module';
 import { StockExchangeModule } from './modules/stock-exchange/stock-exchange.module';
 import { UserModule } from './modules/user/user.module';
+import { RedisProvider } from './configs/redis.provider';
+import { RedisModule } from './modules/redis/redis.module';
 
 
 @Module({
@@ -28,7 +29,6 @@ import { UserModule } from './modules/user/user.module';
       inject: [ConfigService],
       useFactory: async (configService: ConfigService) => configService.get('typeorm'),
     }),
-    UsersModule,
     AuthModule,
     AdminModule,
     CommentModule,
@@ -39,9 +39,10 @@ import { UserModule } from './modules/user/user.module';
     StockModule,
     StockCrawlDataModule,
     StockExchangeModule,
-    UserModule
+    UserModule,
+    RedisModule
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [RedisProvider, AppService],
 })
 export class AppModule { }

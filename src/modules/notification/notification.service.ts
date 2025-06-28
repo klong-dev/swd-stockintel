@@ -4,13 +4,31 @@ import { Repository } from 'typeorm';
 import { Notification } from './entities/notification.entity';
 import { CreateNotificationDto } from './dto/create-notification.dto';
 import { UpdateNotificationDto } from './dto/update-notification.dto';
+import { RedisService } from 'src/modules/redis/redis.service';
 
 @Injectable()
 export class NotificationService {
+    private readonly redis;
     constructor(
         @InjectRepository(Notification)
         private readonly notificationRepository: Repository<Notification>,
-    ) { }
+        private readonly redisService: RedisService,
+    ) {
+        this.redis = this.redisService.getClient();
+    }
+
+    private async getFromCache<T>(key: string): Promise<T | null> {
+        const data = await this.redis.get(key);
+        return data ? JSON.parse(data) : null;
+    }
+
+    private async setToCache(key: string, value: any, ttl = 60): Promise<void> {
+        await this.redis.set(key, JSON.stringify(value), 'EX', ttl);
+    }
+
+    private async removeFromCache(key: string): Promise<void> {
+        await this.redis.del(key);
+    }
 
     async create(createNotificationDto: CreateNotificationDto, user: any) {
         try {
