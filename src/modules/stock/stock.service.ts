@@ -12,29 +12,94 @@ export class StockService {
         private readonly stockRepository: Repository<Stock>,
     ) { }
 
-    create(createStockDto: CreateStockDto) {
-        const stock = this.stockRepository.create(createStockDto);
-        return this.stockRepository.save(stock);
+    async create(createStockDto: CreateStockDto) {
+        try {
+            const stock = this.stockRepository.create(createStockDto);
+            const data = await this.stockRepository.save(stock);
+            return {
+                error: false,
+                data,
+                message: 'Stock created successfully',
+            };
+        } catch (e) {
+            return {
+                error: true,
+                data: null,
+                message: e.message || 'Failed to create stock',
+            };
+        }
     }
 
-    findAll() {
-        return this.stockRepository.find();
+    async findAll() {
+        try {
+            const data = await this.stockRepository.find();
+            return {
+                error: false,
+                data,
+                message: 'All stocks fetched successfully',
+            };
+        } catch (e) {
+            return {
+                error: true,
+                data: null,
+                message: e.message || 'Failed to fetch stocks',
+            };
+        }
     }
 
-    findOne(id: number) {
-        return this.stockRepository.findOne({ where: { stockId: id } });
+    async findOne(id: number) {
+        try {
+            const data = await this.stockRepository.findOne({ where: { stockId: id } });
+            return {
+                error: false,
+                data,
+                message: 'Stock fetched successfully',
+            };
+        } catch (e) {
+            return {
+                error: true,
+                data: null,
+                message: e.message || 'Failed to fetch stock',
+            };
+        }
     }
 
     async update(id: number, updateStockDto: UpdateStockDto) {
-        const stock = await this.stockRepository.findOne({ where: { stockId: id } });
-        if (!stock) throw new NotFoundException('Stock not found');
-        await this.stockRepository.update(id, updateStockDto);
-        return this.findOne(id);
+        try {
+            const stock = await this.stockRepository.findOne({ where: { stockId: id } });
+            if (!stock) return { error: true, data: null, message: 'Stock not found' };
+            await this.stockRepository.update(id, updateStockDto);
+            const data = await this.stockRepository.findOne({ where: { stockId: id } });
+            return {
+                error: false,
+                data,
+                message: 'Stock updated successfully',
+            };
+        } catch (e) {
+            return {
+                error: true,
+                data: null,
+                message: e.message || 'Failed to update stock',
+            };
+        }
     }
 
     async remove(id: number) {
-        const stock = await this.stockRepository.findOne({ where: { stockId: id } });
-        if (!stock) throw new NotFoundException('Stock not found');
-        return this.stockRepository.delete(id);
+        try {
+            const stock = await this.stockRepository.findOne({ where: { stockId: id } });
+            if (!stock) return { error: true, data: null, message: 'Stock not found' };
+            const data = await this.stockRepository.delete(id);
+            return {
+                error: false,
+                data,
+                message: 'Stock deleted successfully',
+            };
+        } catch (e) {
+            return {
+                error: true,
+                data: null,
+                message: e.message || 'Failed to delete stock',
+            };
+        }
     }
 }
