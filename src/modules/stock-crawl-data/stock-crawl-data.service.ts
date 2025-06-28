@@ -5,6 +5,7 @@ import { StockCrawlData } from './entities/stock-crawl-data.entity';
 import { CreateStockCrawlDataDto } from './dto/create-stock-crawl-data.dto';
 import { UpdateStockCrawlDataDto } from './dto/update-stock-crawl-data.dto';
 import { RedisService } from 'src/modules/redis/redis.service';
+import { paginate } from '../../utils/pagination';
 
 @Injectable()
 export class StockCrawlDataService {
@@ -30,29 +31,95 @@ export class StockCrawlDataService {
         await this.redis.del(key);
     }
 
-    create(createStockCrawlDataDto: CreateStockCrawlDataDto) {
-        const entity = this.stockCrawlDataRepository.create(createStockCrawlDataDto);
-        return this.stockCrawlDataRepository.save(entity);
+    async create(createStockCrawlDataDto: CreateStockCrawlDataDto) {
+        try {
+            const entity = this.stockCrawlDataRepository.create(createStockCrawlDataDto);
+            const data = await this.stockCrawlDataRepository.save(entity);
+            return {
+                error: false,
+                data,
+                message: 'Stock crawl data created successfully',
+            };
+        } catch (e) {
+            return {
+                error: true,
+                data: null,
+                message: e.message || 'Failed to create stock crawl data',
+            };
+        }
     }
 
-    findAll() {
-        return this.stockCrawlDataRepository.find();
+    async findAll(page: number = 1, pageSize: number = 10): Promise<{ error: boolean; data: any; message: string }> {
+        try {
+            const data = await this.stockCrawlDataRepository.find();
+            const paginated = paginate(data, page, pageSize);
+            return {
+                error: false,
+                data: paginated,
+                message: 'All stock crawl data fetched successfully',
+            };
+        } catch (e) {
+            return {
+                error: true,
+                data: null,
+                message: e.message || 'Failed to fetch stock crawl data',
+            };
+        }
     }
 
-    findOne(id: number) {
-        return this.stockCrawlDataRepository.findOne({ where: { crawlId: id } });
+    async findOne(id: number) {
+        try {
+            const data = await this.stockCrawlDataRepository.findOne({ where: { crawlId: id } });
+            return {
+                error: false,
+                data,
+                message: 'Stock crawl data fetched successfully',
+            };
+        } catch (e) {
+            return {
+                error: true,
+                data: null,
+                message: e.message || 'Failed to fetch stock crawl data',
+            };
+        }
     }
 
     async update(id: number, updateStockCrawlDataDto: UpdateStockCrawlDataDto) {
-        const entity = await this.stockCrawlDataRepository.findOne({ where: { crawlId: id } });
-        if (!entity) throw new NotFoundException('Stock crawl data not found');
-        await this.stockCrawlDataRepository.update(id, updateStockCrawlDataDto);
-        return this.findOne(id);
+        try {
+            const entity = await this.stockCrawlDataRepository.findOne({ where: { crawlId: id } });
+            if (!entity) return { error: true, data: null, message: 'Stock crawl data not found' };
+            await this.stockCrawlDataRepository.update(id, updateStockCrawlDataDto);
+            const data = await this.stockCrawlDataRepository.findOne({ where: { crawlId: id } });
+            return {
+                error: false,
+                data,
+                message: 'Stock crawl data updated successfully',
+            };
+        } catch (e) {
+            return {
+                error: true,
+                data: null,
+                message: e.message || 'Failed to update stock crawl data',
+            };
+        }
     }
 
     async remove(id: number) {
-        const entity = await this.stockCrawlDataRepository.findOne({ where: { crawlId: id } });
-        if (!entity) throw new NotFoundException('Stock crawl data not found');
-        return this.stockCrawlDataRepository.delete(id);
+        try {
+            const entity = await this.stockCrawlDataRepository.findOne({ where: { crawlId: id } });
+            if (!entity) return { error: true, data: null, message: 'Stock crawl data not found' };
+            const data = await this.stockCrawlDataRepository.delete(id);
+            return {
+                error: false,
+                data,
+                message: 'Stock crawl data deleted successfully',
+            };
+        } catch (e) {
+            return {
+                error: true,
+                data: null,
+                message: e.message || 'Failed to delete stock crawl data',
+            };
+        }
     }
 }

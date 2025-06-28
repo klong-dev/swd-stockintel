@@ -1,4 +1,4 @@
-import { Controller, Get, Post as HttpPost, Body, Patch, Param, Delete, UseGuards, Req, UploadedFile, UseInterceptors } from '@nestjs/common';
+import { Controller, Get, Post as HttpPost, Body, Patch, Param, Delete, UseGuards, Req, Query, UploadedFile, UseInterceptors } from '@nestjs/common';
 import { PostService } from './post.service';
 import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
@@ -44,15 +44,64 @@ export class PostController {
   }
 
   @ApiOperation({ summary: 'Get all posts' })
-  @ApiResponse({ status: 200, description: 'List of posts.' })
+  @ApiResponse({
+    status: 200,
+    description: 'All posts fetched successfully',
+    schema: {
+      example: {
+        error: false,
+        data: {
+          items: [
+            { postId: 1, title: 'Post Title', content: 'Post content' }
+          ],
+          total: 1,
+          page: 1,
+          pageSize: 10
+        },
+        message: 'All posts fetched successfully',
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Failed to fetch posts.',
+    schema: {
+      example: {
+        error: true,
+        data: null,
+        message: 'Failed to fetch posts',
+      },
+    },
+  })
   @Get()
-  findAll() {
-    return this.postService.findAll();
+  findAll(@Query('page') page: string = '1', @Query('pageSize') pageSize: string = '10') {
+    return this.postService.findAll(Number(page), Number(pageSize));
   }
 
   @ApiOperation({ summary: 'Get a post by ID' })
   @ApiParam({ name: 'id', type: Number })
-  @ApiResponse({ status: 200, description: 'The found post.' })
+  @ApiResponse({
+    status: 200,
+    description: 'Post fetched successfully',
+    schema: {
+      example: {
+        error: false,
+        data: { postId: 1, title: 'Post Title', content: 'Post content' },
+        message: 'Post fetched successfully',
+      },
+    },
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Post not found.',
+    schema: {
+      example: {
+        error: true,
+        data: null,
+        message: 'Post not found',
+      },
+    },
+  })
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.postService.findOne(+id);
@@ -68,7 +117,6 @@ export class PostController {
         title: { type: 'string', example: 'Post title' },
         content: { type: 'string', example: 'Post content' },
         stockId: { type: 'integer', example: 1 },
-        sourceUrl: { type: 'string', example: 'https://...' },
         file: {
           type: 'string',
           format: 'binary',
@@ -93,7 +141,39 @@ export class PostController {
 
   @ApiOperation({ summary: 'Delete a post by ID' })
   @ApiParam({ name: 'id', type: Number })
-  @ApiResponse({ status: 200, description: 'The post has been deleted.' })
+  @ApiResponse({
+    status: 200,
+    description: 'Post deleted successfully',
+    schema: {
+      example: {
+        error: false,
+        data: {},
+        message: 'Post deleted successfully',
+      },
+    },
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Post not found.',
+    schema: {
+      example: {
+        error: true,
+        data: null,
+        message: 'Post not found',
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Failed to delete post.',
+    schema: {
+      example: {
+        error: true,
+        data: null,
+        message: 'Failed to delete post',
+      },
+    },
+  })
   @UseGuards(JwtAuthGuard)
   @Delete(':id')
   remove(@Param('id') id: string, @Req() req) {

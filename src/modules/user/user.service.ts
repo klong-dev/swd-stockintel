@@ -6,6 +6,7 @@ import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
+import { paginate, PaginationResult } from '../../utils/pagination';
 import { CloudinaryService } from '../cloudinary/cloudinary.service';
 
 @Injectable()
@@ -18,34 +19,99 @@ export class UserService {
     ) { }
 
     async create(createUserDto: CreateUserDto, avatarBuffer?: Buffer) {
-        let avatarUrl = null;
-        if (avatarBuffer) {
-            avatarUrl = await this.cloudinaryService.uploadImageFromBuffer(avatarBuffer, 'avatars');
+        try {
+            let avatarUrl = null;
+            if (avatarBuffer) {
+                avatarUrl = await this.cloudinaryService.uploadImageFromBuffer(avatarBuffer, 'avatars');
+            }
+            const user = this.userRepository.create({ ...createUserDto, avatarUrl });
+            const data = await this.userRepository.save(user);
+            return {
+                error: false,
+                data,
+                message: 'User created successfully',
+            };
+        } catch (e) {
+            return {
+                error: true,
+                data: null,
+                message: e.message || 'Failed to create user',
+            };
         }
-        const user = this.userRepository.create({ ...createUserDto, avatarUrl });
-        return this.userRepository.save(user);
     }
 
-    findAll() {
-        return this.userRepository.find();
+    async findAll(page: number = 1, pageSize: number = 10): Promise<{ error: boolean; data: any; message: string }> {
+        try {
+            const users = await this.userRepository.find();
+            const paginated = paginate(users, page, pageSize);
+            return {
+                error: false,
+                data: paginated,
+                message: 'All users fetched successfully',
+            };
+        } catch (e) {
+            return {
+                error: true,
+                data: null,
+                message: e.message || 'Failed to fetch users',
+            };
+        }
     }
 
-    findOne(id: number) {
-        return this.userRepository.findOne({ where: { userId: id } });
+    async findOne(id: number) {
+        try {
+            const data = await this.userRepository.findOne({ where: { userId: id } });
+            return {
+                error: false,
+                data,
+                message: 'User fetched successfully',
+            };
+        } catch (e) {
+            return {
+                error: true,
+                data: null,
+                message: e.message || 'Failed to fetch user',
+            };
+        }
     }
 
     async update(id: number, updateUserDto: UpdateUserDto, user: any, avatarBuffer?: Buffer) {
-        if (user.userId !== id) throw new ForbiddenException('You can only update your own profile');
-        let avatarUrl = updateUserDto.avatarUrl;
-        if (avatarBuffer) {
-            avatarUrl = await this.cloudinaryService.uploadImageFromBuffer(avatarBuffer, 'avatars');
+        try {
+            if (user.userId !== id) throw new ForbiddenException('You can only update your own profile');
+            let avatarUrl = updateUserDto.avatarUrl;
+            if (avatarBuffer) {
+                avatarUrl = await this.cloudinaryService.uploadImageFromBuffer(avatarBuffer, 'avatars');
+            }
+            await this.userRepository.update(id, { ...updateUserDto, avatarUrl });
+            return {
+                error: false,
+                data: await this.userRepository.findOne({ where: { userId: id } }),
+                message: 'User updated successfully',
+            };
+        } catch (e) {
+            return {
+                error: true,
+                data: null,
+                message: e.message || 'Failed to update user',
+            };
         }
-        await this.userRepository.update(id, { ...updateUserDto, avatarUrl });
-        return this.findOne(id);
     }
 
     async remove(id: number, user: any) {
-        if (user.userId !== id) throw new ForbiddenException('You can only delete your own profile');
-        return this.userRepository.delete(id);
+        try {
+            if (user.userId !== id) return { error: true, data: null, message: 'You can only delete your own profile' };
+            const data = await this.userRepository.delete(id);
+            return {
+                error: false,
+                data,
+                message: 'User deleted successfully',
+            };
+        } catch (e) {
+            return {
+                error: true,
+                data: null,
+                message: e.message || 'Failed to delete user',
+            };
+        }
     }
 }
