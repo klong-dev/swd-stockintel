@@ -39,6 +39,9 @@ export class User {
     @Column({ name: 'updated_at', type: 'timestamp', nullable: true, default: () => 'CURRENT_TIMESTAMP' })
     updatedAt: Date;
 
+    @Column({ name: 'refresh_token', type: 'varchar', length: 500, nullable: true })
+    refreshToken: string | null;
+
     @OneToMany(() => Post, post => post.expert)
     posts: Post[];
 
