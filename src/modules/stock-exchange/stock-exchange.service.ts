@@ -12,29 +12,94 @@ export class StockExchangeService {
         private readonly stockExchangeRepository: Repository<StockExchange>,
     ) { }
 
-    create(createStockExchangeDto: CreateStockExchangeDto) {
-        const entity = this.stockExchangeRepository.create(createStockExchangeDto);
-        return this.stockExchangeRepository.save(entity);
+    async create(createStockExchangeDto: CreateStockExchangeDto) {
+        try {
+            const entity = this.stockExchangeRepository.create(createStockExchangeDto);
+            const data = await this.stockExchangeRepository.save(entity);
+            return {
+                error: false,
+                data,
+                message: 'Stock exchange created successfully',
+            };
+        } catch (e) {
+            return {
+                error: true,
+                data: null,
+                message: e.message || 'Failed to create stock exchange',
+            };
+        }
     }
 
-    findAll() {
-        return this.stockExchangeRepository.find();
+    async findAll() {
+        try {
+            const data = await this.stockExchangeRepository.find();
+            return {
+                error: false,
+                data,
+                message: 'All stock exchanges fetched successfully',
+            };
+        } catch (e) {
+            return {
+                error: true,
+                data: null,
+                message: e.message || 'Failed to fetch stock exchanges',
+            };
+        }
     }
 
-    findOne(id: number) {
-        return this.stockExchangeRepository.findOne({ where: { stockExchangeId: id } });
+    async findOne(id: number) {
+        try {
+            const data = await this.stockExchangeRepository.findOne({ where: { stockExchangeId: id } });
+            return {
+                error: false,
+                data,
+                message: 'Stock exchange fetched successfully',
+            };
+        } catch (e) {
+            return {
+                error: true,
+                data: null,
+                message: e.message || 'Failed to fetch stock exchange',
+            };
+        }
     }
 
     async update(id: number, updateStockExchangeDto: UpdateStockExchangeDto) {
-        const entity = await this.stockExchangeRepository.findOne({ where: { stockExchangeId: id } });
-        if (!entity) throw new NotFoundException('Stock exchange not found');
-        await this.stockExchangeRepository.update(id, updateStockExchangeDto);
-        return this.findOne(id);
+        try {
+            const entity = await this.stockExchangeRepository.findOne({ where: { stockExchangeId: id } });
+            if (!entity) return { error: true, data: null, message: 'Stock exchange not found' };
+            await this.stockExchangeRepository.update(id, updateStockExchangeDto);
+            const data = await this.stockExchangeRepository.findOne({ where: { stockExchangeId: id } });
+            return {
+                error: false,
+                data,
+                message: 'Stock exchange updated successfully',
+            };
+        } catch (e) {
+            return {
+                error: true,
+                data: null,
+                message: e.message || 'Failed to update stock exchange',
+            };
+        }
     }
 
     async remove(id: number) {
-        const entity = await this.stockExchangeRepository.findOne({ where: { stockExchangeId: id } });
-        if (!entity) throw new NotFoundException('Stock exchange not found');
-        return this.stockExchangeRepository.delete(id);
+        try {
+            const entity = await this.stockExchangeRepository.findOne({ where: { stockExchangeId: id } });
+            if (!entity) return { error: true, data: null, message: 'Stock exchange not found' };
+            const data = await this.stockExchangeRepository.delete(id);
+            return {
+                error: false,
+                data,
+                message: 'Stock exchange deleted successfully',
+            };
+        } catch (e) {
+            return {
+                error: true,
+                data: null,
+                message: e.message || 'Failed to delete stock exchange',
+            };
+        }
     }
 }
