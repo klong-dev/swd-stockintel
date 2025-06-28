@@ -5,6 +5,8 @@ import { Post } from './entities/post.entity';
 import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
 import { RedisService } from 'src/modules/redis/redis.service';
+import { paginate } from '../../utils/pagination';
+import { CloudinaryService } from '../cloudinary/cloudinary.service';
 
 @Injectable()
 export class PostService {
@@ -13,6 +15,7 @@ export class PostService {
         @InjectRepository(Post)
         private readonly postRepository: Repository<Post>,
         private readonly redisService: RedisService,
+        private readonly cloudinaryService: CloudinaryService,
     ) {
         this.redis = this.redisService.getClient();
     }
@@ -30,34 +33,122 @@ export class PostService {
         await this.redis.del(key);
     }
 
-    create(createPostDto: CreatePostDto, user: any) {
+    async create(createPostDto: CreatePostDto, user: any, sourceBuffer?: Buffer) {
+        let sourceUrl = null;
+        if (sourceBuffer) {
+            sourceUrl = await this.cloudinaryService.uploadImageFromBuffer(sourceBuffer, 'posts');
+        }
         const post = this.postRepository.create({
             ...createPostDto,
             expertId: user.userId,
+            sourceUrl,
         });
-        return this.postRepository.save(post);
+        const saved = await this.postRepository.save(post);
+        await this.removeFromCache('posts:all');
+        await this.removeFromCache(`posts:${saved.postId}`);
+        return {
+            error: false,
+            saved,
+            message: 'Post created successfully',
+        };
+    } catch(e) {
+        return {
+            error: true,
+            data: null,
+            message: e.message || 'Failed to create post',
+        };
     }
 
-    findAll() {
-        return this.postRepository.find();
+
+    async findAll(page: number = 1, pageSize: number = 10): Promise<{ error: boolean; data: any; message: string }> {
+        try {
+            const cacheKey = 'posts:all';
+            const cached = await this.getFromCache<Post[]>(cacheKey);
+            if (cached) return { error: false, data: cached, message: 'All posts fetched successfully (from cache)' };
+            const data = await this.postRepository.find();
+            const paginated = paginate(data, page, pageSize);
+            await this.setToCache(cacheKey, paginated);
+            return {
+                error: false,
+                data: paginated,
+                message: 'All posts fetched successfully',
+            };
+        } catch (e) {
+            return {
+                error: true,
+                data: null,
+                message: e.message || 'Failed to fetch posts',
+            };
+        }
     }
 
-    findOne(id: number) {
-        return this.postRepository.findOne({ where: { postId: id } });
+    async findOne(id: number) {
+        try {
+            const cacheKey = `posts:${id}`;
+            const cached = await this.getFromCache<Post>(cacheKey);
+            if (cached) return cached;
+            const result = await this.postRepository.findOne({ where: { postId: id } });
+            if (result) await this.setToCache(cacheKey, result);
+            return {
+                error: false,
+                result,
+                message: 'Post fetched successfully',
+            };
+        } catch (e) {
+            return {
+                error: true,
+                data: null,
+                message: e.message || 'Failed to fetch post',
+            };
+        }
     }
 
-    async update(id: number, updatePostDto: UpdatePostDto, user: any) {
-        const post = await this.postRepository.findOne({ where: { postId: id } });
-        if (!post) throw new NotFoundException('Post not found');
-        if (post.expertId !== user.userId) throw new ForbiddenException('You can only update your own posts');
-        await this.postRepository.update(id, updatePostDto);
-        return this.findOne(id);
+    async update(id: number, updatePostDto: UpdatePostDto, user: any, sourceBuffer?: Buffer) {
+        try {
+            const post = await this.postRepository.findOne({ where: { postId: id } });
+            if (!post) return { error: true, data: null, message: 'Post not found' };
+            if (post.expertId !== user.userId) return { error: true, data: null, message: 'You can only update your own posts' };
+            let sourceUrl = updatePostDto.sourceUrl;
+            if (sourceBuffer) {
+                sourceUrl = await this.cloudinaryService.uploadImageFromBuffer(sourceBuffer, 'posts');
+            }
+            await this.postRepository.update(id, { ...updatePostDto, sourceUrl });
+            await this.removeFromCache('posts:all');
+            await this.removeFromCache(`posts:${id}`);
+            const data = await this.postRepository.findOne({ where: { postId: id } });
+            return {
+                error: false,
+                data,
+                message: 'Post updated successfully',
+            };
+        } catch (e) {
+            return {
+                error: true,
+                data: null,
+                message: e.message || 'Failed to update post',
+            };
+        }
     }
 
     async remove(id: number, user: any) {
-        const post = await this.postRepository.findOne({ where: { postId: id } });
-        if (!post) throw new NotFoundException('Post not found');
-        if (post.expertId !== user.userId) throw new ForbiddenException('You can only delete your own posts');
-        return this.postRepository.delete(id);
+        try {
+            const post = await this.postRepository.findOne({ where: { postId: id } });
+            if (!post) return { error: true, data: null, message: 'Post not found' };
+            if (post.expertId !== user.userId) return { error: true, data: null, message: 'You can only delete your own posts' };
+            const data = await this.postRepository.delete(id);
+            await this.removeFromCache('posts:all');
+            await this.removeFromCache(`posts:${id}`);
+            return {
+                error: false,
+                data,
+                message: 'Post deleted successfully',
+            };
+        } catch (e) {
+            return {
+                error: true,
+                data: null,
+                message: e.message || 'Failed to delete post',
+            };
+        }
     }
 }
