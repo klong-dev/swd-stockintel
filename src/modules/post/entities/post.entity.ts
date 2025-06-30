@@ -27,7 +27,7 @@ export class Post {
     @Column({ name: 'view_count', type: 'int', nullable: true })
     viewCount: number | null;
 
-    @Column({ name: 'session', type: 'int' })
+    @Column({ name: 'session', type: 'int', nullable: true, default: 0 })
     session: number;
 
     @Column({ name: 'like_count', type: 'int', nullable: true })

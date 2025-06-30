@@ -41,24 +41,25 @@ export class PostService {
         const post = this.postRepository.create({
             ...createPostDto,
             expertId: user.userId,
-            sourceUrl,
+            // sourceUrl,
         });
         const saved = await this.postRepository.save(post);
         await this.removeFromCache('posts:all');
         await this.removeFromCache(`posts:${saved.postId}`);
-        return {
-            error: false,
-            saved,
-            message: 'Post created successfully',
-        };
-    } catch(e) {
-        return {
-            error: true,
-            data: null,
-            message: e.message || 'Failed to create post',
-        };
+        try {
+            return {
+                error: false,
+                saved,
+                message: 'Post created successfully',
+            };
+        } catch (e) {
+            return {
+                error: true,
+                data: null,
+                message: e.message || 'Failed to create post',
+            };
+        }
     }
-
 
     async findAll(page: number = 1, pageSize: number = 10): Promise<{ error: boolean; data: any; message: string }> {
         try {
