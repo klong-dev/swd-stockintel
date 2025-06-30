@@ -10,6 +10,9 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     }
 
     getClient(): Redis {
+        if (!this.client) {
+            this.client = new Redis(process.env.REDIS_URL);
+        }
         return this.client;
     }
 
