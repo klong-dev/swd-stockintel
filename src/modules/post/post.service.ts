@@ -83,26 +83,32 @@ export class PostService {
         }
     }
 
-    async findOne(id: number) {
-        try {
-            const cacheKey = `posts:${id}`;
-            const cached = await this.getFromCache<Post>(cacheKey);
-            if (cached) return cached;
-            const result = await this.postRepository.findOne({ where: { postId: id } });
-            if (result) await this.setToCache(cacheKey, result);
+async findOne(id: number) {
+    try {
+        const cacheKey = `posts:${id}`;
+        const cached = await this.getFromCache<Post>(cacheKey);
+        if (cached) {
             return {
                 error: false,
-                result,
-                message: 'Post fetched successfully',
-            };
-        } catch (e) {
-            return {
-                error: true,
-                data: null,
-                message: e.message || 'Failed to fetch post',
+                result: cached,
+                message: 'Post fetched successfully (from cache)',
             };
         }
+        const result = await this.postRepository.findOne({ where: { postId: id } });
+        if (result) await this.setToCache(cacheKey, result);
+        return {
+            error: false,
+            result,
+            message: 'Post fetched successfully',
+        };
+    } catch (e) {
+        return {
+            error: true,
+            data: null,
+            message: e.message || 'Failed to fetch post',
+        };
     }
+}
 
     async update(id: number, updatePostDto: UpdatePostDto, user: any, sourceBuffer?: Buffer) {
         try {
