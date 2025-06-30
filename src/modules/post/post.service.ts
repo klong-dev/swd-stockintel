@@ -10,27 +10,27 @@ import { CloudinaryService } from '../cloudinary/cloudinary.service';
 
 @Injectable()
 export class PostService {
-    private readonly redis;
     constructor(
         @InjectRepository(Post)
         private readonly postRepository: Repository<Post>,
         private readonly redisService: RedisService,
         private readonly cloudinaryService: CloudinaryService,
-    ) {
-        this.redis = this.redisService.getClient();
-    }
+    ) {}
 
     private async getFromCache<T>(key: string): Promise<T | null> {
-        const data = await this.redis.get(key);
+        const client = this.redisService.getClient();
+        const data = await client.get(key);
         return data ? JSON.parse(data) : null;
     }
 
     private async setToCache(key: string, value: any, ttl = 60): Promise<void> {
-        await this.redis.set(key, JSON.stringify(value), 'EX', ttl);
+        const client = this.redisService.getClient();
+        await client.set(key, JSON.stringify(value), 'EX', ttl);
     }
 
     private async removeFromCache(key: string): Promise<void> {
-        await this.redis.del(key);
+        const client = this.redisService.getClient();
+        await client.del(key);
     }
 
     async create(createPostDto: CreatePostDto, user: any, sourceBuffer?: Buffer) {
