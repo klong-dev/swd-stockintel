@@ -7,7 +7,7 @@ import { Report } from '../../report/entities/report.entity';
 @Entity('user')
 export class User {
     @PrimaryGeneratedColumn({ name: 'user_id' })
-    userId: number;
+    userId: string;
 
     @Column({ name: 'email', type: 'varchar', length: 255, unique: true })
     email: string;
