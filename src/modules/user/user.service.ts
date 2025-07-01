@@ -58,7 +58,7 @@ export class UserService {
         }
     }
 
-    async findOne(id: number) {
+    async findOne(id: string) {
         try {
             const data = await this.userRepository.findOne({ where: { userId: id } });
             return {
@@ -75,7 +75,7 @@ export class UserService {
         }
     }
 
-    async update(id: number, updateUserDto: UpdateUserDto, user: any, avatarBuffer?: Buffer) {
+    async update(id: string, updateUserDto: UpdateUserDto, user: any, avatarBuffer?: Buffer) {
         try {
             if (user.userId !== id) throw new ForbiddenException('You can only update your own profile');
             let avatarUrl = updateUserDto.avatarUrl;
@@ -97,7 +97,7 @@ export class UserService {
         }
     }
 
-    async remove(id: number, user: any) {
+    async remove(id: string, user: any) {
         try {
             if (user.userId !== id) return { error: true, data: null, message: 'You can only delete your own profile' };
             const data = await this.userRepository.delete(id);
