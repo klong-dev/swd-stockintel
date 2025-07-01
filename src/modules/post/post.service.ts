@@ -87,7 +87,7 @@ export class PostService {
         try {
             const cacheKey = `posts:${id}`;
             const cached = await this.getFromCache<Post>(cacheKey);
-            if (cached) return cached;
+            if (cached) return { error: false, result: cached, message: 'Post fetched successfully (from cache)' };
             const result = await this.postRepository.findOne({ where: { postId: id } });
             if (result) await this.setToCache(cacheKey, result);
             return {
