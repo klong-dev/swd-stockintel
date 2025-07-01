@@ -17,6 +17,7 @@ import { StockExchangeModule } from './modules/stock-exchange/stock-exchange.mod
 import { UserModule } from './modules/user/user.module';
 import { RedisModule } from './modules/redis/redis.module';
 import { CloudinaryModule } from './modules/cloudinary/cloudinary.module';
+import { TagModule } from './modules/tag/tag.module';
 
 
 @Module({
@@ -41,7 +42,8 @@ import { CloudinaryModule } from './modules/cloudinary/cloudinary.module';
     StockExchangeModule,
     UserModule,
     RedisModule,
-    CloudinaryModule
+    CloudinaryModule,
+    TagModule
   ],
   controllers: [AppController],
   providers: [AppService],

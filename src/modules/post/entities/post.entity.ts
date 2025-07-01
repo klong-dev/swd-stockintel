@@ -1,8 +1,9 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToMany, JoinColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToMany, JoinColumn, OneToOne } from 'typeorm';
 import { User } from '../../user/entities/user.entity';
 import { Stock } from '../../stock/entities/stock.entity';
 import { Comment } from '../../comment/entities/comment.entity';
 import { Report } from '../../report/entities/report.entity';
+import { Tag } from 'src/modules/tag/entities/tag.entity';
 
 @Entity('post')
 export class Post {
@@ -42,6 +43,12 @@ export class Post {
     @ManyToOne(() => User, user => user.posts)
     @JoinColumn({ name: 'expert_id' })
     expert: User;
+
+    @OneToOne(() => Tag, tag => tag.post, {
+        nullable: true
+    })
+    @JoinColumn({ name: 'tagId' })
+    tag: Tag | null;
 
     @ManyToOne(() => Stock, stock => stock.posts)
     @JoinColumn({ name: 'stock_id' })

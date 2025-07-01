@@ -12,6 +12,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 export class PostController {
   constructor(private readonly postService: PostService) { }
 
+
   @ApiOperation({ summary: 'Create a new post with optional image upload' })
   @ApiConsumes('multipart/form-data')
   @ApiBody({
@@ -78,6 +79,36 @@ export class PostController {
     return this.postService.findAll(Number(page), Number(pageSize));
   }
 
+  @ApiOperation({ summary: 'Get top viewed posts' })
+  @ApiResponse({
+    status: 200,
+    description: 'Top viewed posts fetched successfully',
+    schema: {
+      example: {
+        error: false,
+        data: [
+          { postId: 1, title: 'Post Title', content: 'Post content' }
+        ],
+        message: 'Top viewed posts fetched successfully',
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Failed to fetch top viewed posts.',
+    schema: {
+      example: {
+        error: true,
+        data: null,
+        message: 'Failed to fetch top viewed posts',
+      },
+    },
+  })
+  @Get('top-view')
+  findTopViewed(@Query('size') size: string = '10') {
+    return this.postService.findTopViewed(Number(size));
+  }
+
   @ApiOperation({ summary: 'Get a post by ID' })
   @ApiParam({ name: 'id', type: Number })
   @ApiResponse({
@@ -138,6 +169,8 @@ export class PostController {
     const sourceBuffer = file ? file.buffer : undefined;
     return this.postService.update(+id, updatePostDto, req.user, sourceBuffer);
   }
+
+
 
   @ApiOperation({ summary: 'Delete a post by ID' })
   @ApiParam({ name: 'id', type: Number })
