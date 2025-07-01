@@ -54,12 +54,12 @@ export class CommentService {
 
     async findAll(page: number = 1, pageSize: number = 10): Promise<{ error: boolean; data: any; message: string }> {
         try {
-            const cacheKey = `${this.cachePrefix}:all`;
+            const cacheKey = `${this.cachePrefix}:all:page=${page}:size=${pageSize}`;
             const cached = await this.getFromCache<Comment[]>(cacheKey);
             if (cached) return { error: false, data: cached, message: 'Comments fetched from cache' };
             const data = await this.commentRepository.find();
             const paginated = paginate(data, page, pageSize);
-            await this.setToCache(cacheKey, data);
+            await this.setToCache(cacheKey, paginated);
             return {
                 error: false,
                 data: paginated,
