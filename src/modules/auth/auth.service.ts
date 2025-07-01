@@ -9,6 +9,7 @@ import { User } from '../user/entities/user.entity';
 import * as bcrypt from 'bcrypt';
 import { RedisService } from 'src/modules/redis/redis.service';
 import { v4 as uuidv4 } from 'uuid';
+import e from 'express';
 
 @Injectable()
 export class AuthService {
@@ -70,15 +71,39 @@ export class AuthService {
       });
 
       const user = {
-        id: data.sub,
+        userId: data.sub,
         name: data.name,
         email: data.email,
-        picture: data.picture,
+        avatarUrl: data.picture,
         provider: 'google',
       };
 
-      const jwt = this.jwtService.sign({ sub: user.id, email: user.email });
-      return { accessToken: jwt, user };
+      // Check if user haven't registered yet
+      let existingUser = await this.userRepository.findOne({ where: { socialId: user.userId, provider: 'google' } });
+      if (!existingUser) {
+        existingUser = this.userRepository.create({
+          userId: user.userId,
+          email: user.email,
+          fullName: user.name,
+          avatarUrl: user.avatarUrl,
+          socialId: user.userId,
+          provider: 'google',
+          refreshToken: uuidv4(),
+        });
+        await this.userRepository.save(existingUser);
+      }
+      else {
+        existingUser.fullName = user.name;
+        existingUser.avatarUrl = user.avatarUrl;
+        existingUser.socialId = user.userId;
+        existingUser.provider = 'google';
+        await this.userRepository.save(existingUser);
+      }
+
+      const refreshToken = uuidv4();
+      existingUser.refreshToken = refreshToken;
+      await this.userRepository.save(existingUser);
+      return this.generateToken(existingUser, refreshToken);
     } catch (e) {
       throw new UnauthorizedException('Google token invalid');
     }
