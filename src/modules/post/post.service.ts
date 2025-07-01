@@ -86,7 +86,7 @@ export class PostService {
             const data = await this.postRepository.find({
                 order: { viewCount: 'DESC' },
                 take: size,
-                relations: ['expert']
+                relations: ['tag', 'expert']
             });
             return {
                 error: false,
