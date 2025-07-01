@@ -64,7 +64,7 @@ export class PostService {
     async findAll(page: number = 1, pageSize: number = 10): Promise<{ error: boolean; data: any; message: string }> {
         try {
             const data = await this.postRepository.find({
-                relations: ['tag', 'tag.name']
+                relations: ['tag']
             });
             const paginated = paginate(data, page, pageSize);
             return {
@@ -106,7 +106,7 @@ export class PostService {
             const cacheKey = `posts:${id}`;
             const cached = await this.getFromCache<Post>(cacheKey);
             if (cached) return { error: false, result: cached, message: 'Post fetched successfully (from cache)' };
-            const result = await this.postRepository.findOne({ where: { postId: id } });
+            const result = await this.postRepository.findOne({ where: { postId: id }, relations: ['tag'] });
             if (result) await this.setToCache(cacheKey, result);
             if (!result) return { error: true, data: null, message: 'Post not found' };
             return {
