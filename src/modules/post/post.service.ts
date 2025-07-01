@@ -63,7 +63,9 @@ export class PostService {
 
     async findAll(page: number = 1, pageSize: number = 10): Promise<{ error: boolean; data: any; message: string }> {
         try {
-            const data = await this.postRepository.find();
+            const data = await this.postRepository.find({
+                relations: ['tag', 'tag.name']
+            });
             const paginated = paginate(data, page, pageSize);
             return {
                 error: false,
