@@ -79,6 +79,26 @@ export class PostService {
         }
     }
 
+    async findTopViewed(size: number = 10): Promise<{ error: boolean; data: any; message: string }> {
+        try {
+            const data = await this.postRepository.find({
+                order: { viewCount: 'DESC' },
+                take: size,
+            });
+            return {
+                error: false,
+                data: data,
+                message: 'All posts fetched successfully',
+            };
+        } catch (e) {
+            return {
+                error: true,
+                data: null,
+                message: e.message || 'Failed to fetch posts',
+            };
+        }
+    }
+
     async findOne(id: number) {
         try {
             const cacheKey = `posts:${id}`;
@@ -86,9 +106,10 @@ export class PostService {
             if (cached) return { error: false, result: cached, message: 'Post fetched successfully (from cache)' };
             const result = await this.postRepository.findOne({ where: { postId: id } });
             if (result) await this.setToCache(cacheKey, result);
+            if (!result) return { error: true, data: null, message: 'Post not found' };
             return {
                 error: false,
-                result,
+                data: result,
                 message: 'Post fetched successfully',
             };
         } catch (e) {
