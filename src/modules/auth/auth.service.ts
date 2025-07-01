@@ -1,4 +1,8 @@
-import { Injectable, UnauthorizedException, ConflictException } from '@nestjs/common';
+import {
+  Injectable,
+  UnauthorizedException,
+  ConflictException,
+} from '@nestjs/common';
 import { CreateAuthDto } from './dto/create-auth.dto';
 import { UpdateAuthDto } from './dto/update-auth.dto';
 import axios from 'axios';
@@ -66,9 +70,12 @@ export class AuthService {
 
   async googleLogin(idToken: string) {
     try {
-      const { data } = await axios.get(`https://www.googleapis.com/oauth2/v3/tokeninfo`, {
-        params: { id_token: idToken },
-      });
+      const { data } = await axios.get(
+        `https://www.googleapis.com/oauth2/v3/tokeninfo`,
+        {
+          params: { id_token: idToken },
+        },
+      );
 
       const user = {
         userId: data.sub,
@@ -79,7 +86,9 @@ export class AuthService {
       };
 
       // Check if user haven't registered yet
-      let existingUser = await this.userRepository.findOne({ where: { socialId: user.userId, provider: 'google' } });
+      let existingUser = await this.userRepository.findOne({
+        where: { socialId: user.userId, provider: 'google' },
+      });
       if (!existingUser) {
         existingUser = this.userRepository.create({
           userId: user.userId,
@@ -91,8 +100,7 @@ export class AuthService {
           refreshToken: uuidv4(),
         });
         await this.userRepository.save(existingUser);
-      }
-      else {
+      } else {
         existingUser.fullName = user.name;
         existingUser.avatarUrl = user.avatarUrl;
         existingUser.socialId = user.userId;
@@ -114,14 +122,23 @@ export class AuthService {
     if (existing) throw new ConflictException('Email already registered');
     const passwordHash = password ? await bcrypt.hash(password, 10) : null;
     const refreshToken = uuidv4();
-    const user = this.userRepository.create({ email, passwordHash, fullName, refreshToken });
+    const user = this.userRepository.create({
+      email,
+      passwordHash,
+      fullName,
+      refreshToken,
+    });
     await this.userRepository.save(user);
     return this.generateToken(user, refreshToken);
   }
 
   async login(email: string, password: string) {
     const user = await this.userRepository.findOne({ where: { email } });
-    if (!user || !user.passwordHash || !(await bcrypt.compare(password, user.passwordHash))) {
+    if (
+      !user ||
+      !user.passwordHash ||
+      !(await bcrypt.compare(password, user.passwordHash))
+    ) {
       throw new UnauthorizedException('Invalid credentials');
     }
     const refreshToken = uuidv4();
@@ -137,11 +154,24 @@ export class AuthService {
   }
 
   private generateToken(user: User, refreshToken?: string) {
-    const payload = { userId: user.userId, email: user.email, isExpert: user.isExpert };
+    const payload = {
+      userId: user.userId,
+      email: user.email,
+      isExpert: user.isExpert,
+    };
     return {
       access_token: this.jwtService.sign(payload),
       refresh_token: refreshToken || user.refreshToken,
       user: payload,
+    };
+  }
+
+  async getFullUserById(userId: string) {
+    const user = await this.userRepository.findOne({ where: { userId } });
+    return {
+      error: false,
+      user,
+      message: 'Fetch user infor successfully',
     };
   }
 }

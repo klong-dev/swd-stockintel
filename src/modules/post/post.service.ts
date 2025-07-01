@@ -41,7 +41,7 @@ export class PostService {
         const post = this.postRepository.create({
             ...createPostDto,
             expertId: user.userId,
-            // sourceUrl,
+            sourceUrl
         });
         const saved = await this.postRepository.save(post);
         await this.removeFromCache('posts:all');

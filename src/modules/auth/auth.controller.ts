@@ -50,7 +50,8 @@ export class AuthController {
 
   @UseGuards(JwtAuthGuard)
   @Get('me')
-  getMe(@Req() req) {
-    return { user: req.user };
+  async getMe(@Req() req) {
+    const userId = req.user.userId;
+    return this.authService.getFullUserById(userId);
   }
 }
