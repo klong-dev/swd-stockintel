@@ -63,12 +63,8 @@ export class PostService {
 
     async findAll(page: number = 1, pageSize: number = 10): Promise<{ error: boolean; data: any; message: string }> {
         try {
-            const cacheKey = 'posts:all';
-            const cached = await this.getFromCache<Post[]>(cacheKey);
-            if (cached) return { error: false, data: cached, message: 'All posts fetched successfully (from cache)' };
             const data = await this.postRepository.find();
             const paginated = paginate(data, page, pageSize);
-            await this.setToCache(cacheKey, paginated);
             return {
                 error: false,
                 data: paginated,
