@@ -25,14 +25,14 @@ export class Post {
     @Column({ name: 'source_url', type: 'varchar', length: 255, nullable: true })
     sourceUrl: string | null;
 
-    @Column({ name: 'view_count', type: 'int', nullable: true })
-    viewCount: number | null;
+    @Column({ name: 'view_count', type: 'int', nullable: true, default: 0 })
+    viewCount: number;
 
     @Column({ name: 'session', type: 'int', nullable: true, default: 0 })
     session: number;
 
-    @Column({ name: 'like_count', type: 'int', nullable: true })
-    likeCount: number | null;
+    @Column({ name: 'like_count', type: 'int', nullable: true, default: 0 })
+    likeCount: number;
 
     @Column({ name: 'created_at', type: 'timestamp', nullable: true, default: () => 'CURRENT_TIMESTAMP' })
     createdAt: Date;
