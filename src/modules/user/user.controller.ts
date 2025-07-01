@@ -102,11 +102,11 @@ export class UserController {
   })
   @Get(':id')
   findOne(@Param('id') id: string) {
-    return this.userService.findOne(+id);
+    return this.userService.findOne(id);
   }
 
   @ApiOperation({ summary: 'Update user by ID with optional avatar upload' })
-  @ApiParam({ name: 'id', type: Number })
+  @ApiParam({ name: 'id', type: String })
   @ApiConsumes('multipart/form-data')
   @ApiBody({
     schema: {
@@ -164,11 +164,11 @@ export class UserController {
   @Patch(':id')
   update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto, @UploadedFile() file: any, @Req() req) {
     const avatarBuffer = file ? file.buffer : undefined;
-    return this.userService.update(+id, updateUserDto, req.user, avatarBuffer);
+    return this.userService.update(id, updateUserDto, req.user, avatarBuffer);
   }
 
   @ApiOperation({ summary: 'Delete user by ID' })
-  @ApiParam({ name: 'id', type: Number })
+  @ApiParam({ name: 'id', type: String })
   @ApiResponse({
     status: 200,
     description: 'User deleted successfully',
@@ -205,6 +205,6 @@ export class UserController {
   @UseGuards(JwtAuthGuard)
   @Delete(':id')
   remove(@Param('id') id: string, @Req() req) {
-    return this.userService.remove(+id, req.user);
+    return this.userService.remove(id, req.user);
   }
 }
