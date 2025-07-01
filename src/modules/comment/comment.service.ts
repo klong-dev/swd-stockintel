@@ -54,11 +54,20 @@ export class CommentService {
 
     async findAll(page: number = 1, pageSize: number = 10): Promise<{ error: boolean; data: any; message: string }> {
         try {
-            const data = await this.commentRepository.find();
-            const paginated = paginate(data, page, pageSize);
+            const data = await this.commentRepository.find({
+                relations: ['user']
+            });
+            const sanitized = data.map(comment => {
+                if (comment.user) {
+                    const { passwordHash, ...userWithoutPassword } = comment.user;
+                    return { ...comment, user: userWithoutPassword };
+                }
+                return comment;
+            });
+            const paginated = paginate(sanitized, page, pageSize);
             return {
                 error: false,
-                data: paginated,
+                data: paginated.data,
                 message: 'All comments fetched successfully',
             };
         } catch (e) {
