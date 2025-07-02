@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, OneToMany } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, OneToMany, PrimaryColumn } from 'typeorm';
 import { Post } from '../../post/entities/post.entity';
 import { Comment } from '../../comment/entities/comment.entity';
 import { Notification } from '../../notification/entities/notification.entity';
@@ -6,7 +6,7 @@ import { Report } from '../../report/entities/report.entity';
 
 @Entity('user')
 export class User {
-    @PrimaryGeneratedColumn({ name: 'user_id' })
+    @PrimaryColumn({ name: 'user_id', type: 'varchar', length: 50, unique: true })
     userId: string;
 
     @Column({ name: 'email', type: 'varchar', length: 255, unique: true })
