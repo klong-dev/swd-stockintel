@@ -70,10 +70,10 @@ export class AuthService {
 
   async googleLogin(idToken: string) {
     try {
-      const { data } = await axios.get(
+      const { data } = await axios.post(
         `https://www.googleapis.com/oauth2/v3/tokeninfo`,
         {
-          params: { id_token: idToken },
+          id_token: idToken,
         },
       );
 
@@ -91,7 +91,7 @@ export class AuthService {
       });
       if (!existingUser) {
         existingUser = this.userRepository.create({
-          userId: user.userId,
+          userId: uuidv4(),
           email: user.email,
           fullName: user.name,
           avatarUrl: user.avatarUrl,
@@ -113,7 +113,7 @@ export class AuthService {
       await this.userRepository.save(existingUser);
       return this.generateToken(existingUser, refreshToken);
     } catch (e) {
-      throw new UnauthorizedException('Google token invalid');
+      throw new UnauthorizedException('Google token invalid' + e.message);
     }
   }
 
@@ -123,6 +123,8 @@ export class AuthService {
     const passwordHash = password ? await bcrypt.hash(password, 10) : null;
     const refreshToken = uuidv4();
     const user = this.userRepository.create({
+      userId: uuidv4(),
+      provider: 'local',
       email,
       passwordHash,
       fullName,
