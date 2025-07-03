@@ -18,6 +18,7 @@ import { UserModule } from './modules/user/user.module';
 import { RedisModule } from './modules/redis/redis.module';
 import { CloudinaryModule } from './modules/cloudinary/cloudinary.module';
 import { TagModule } from './modules/tag/tag.module';
+import { NewsModule } from './modules/news/news.module';
 
 
 @Module({
@@ -43,7 +44,8 @@ import { TagModule } from './modules/tag/tag.module';
     UserModule,
     RedisModule,
     CloudinaryModule,
-    TagModule
+    TagModule,
+    NewsModule
   ],
   controllers: [AppController],
   providers: [AppService],
