@@ -42,6 +42,21 @@ export class NewsController {
     return this.newsService.findOne(id);
   }
 
+  @Get('tag/:tagId')
+  @ApiOperation({ summary: 'Lấy danh sách tin tức theo tagId' })
+  @ApiParam({ name: 'tagId', required: true, description: 'ID của tag' })
+  @ApiResponse({
+    status: 200,
+    description: 'Danh sách tin tức theo tag',
+    type: News,
+    isArray: true,
+  })
+  async findByTagId(
+    @Param('tagId') tagId: number,
+  ): Promise<{ error: boolean; data: News[]; message: string }> {
+    return this.newsService.findByTagId(tagId);
+  }
+
   @Delete(':id')
   @ApiOperation({ summary: 'Xóa một tin tức theo ID' })
   @ApiParam({ name: 'id', required: true, description: 'ID của tin tức' })

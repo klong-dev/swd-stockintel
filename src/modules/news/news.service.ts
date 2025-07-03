@@ -57,4 +57,24 @@ export class NewsService {
       return { error: true, data: null, message: 'Lỗi khi xóa tin tức' };
     }
   }
+
+  async findByTagId(tagId: number) {
+    try {
+      const data = await this.newsRepository.find({
+        where: { tag: { tagId } } as any,
+        relations: ['tag'],
+      });
+      return {
+        error: false,
+        data,
+        message: 'Lấy danh sách tin tức theo tag thành công',
+      };
+    } catch (e) {
+      return {
+        error: true,
+        data: null,
+        message: 'Lỗi khi lấy tin tức theo tag',
+      };
+    }
+  }
 }
