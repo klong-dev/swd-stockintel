@@ -3,7 +3,7 @@ import { User } from '../../user/entities/user.entity';
 import { Stock } from '../../stock/entities/stock.entity';
 import { Comment } from '../../comment/entities/comment.entity';
 import { Report } from '../../report/entities/report.entity';
-import { Tag } from 'src/modules/tag/entities/tag.entity';
+import { Tag } from '../../tag/entities/tag.entity';
 
 @Entity('post')
 export class Post {
