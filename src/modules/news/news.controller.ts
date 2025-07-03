@@ -17,10 +17,10 @@ export class NewsController {
   constructor(private readonly newsService: NewsService) {}
 
   @Get()
-  @ApiOperation({ summary: 'Lấy danh sách tất cả tin tức' })
+  @ApiOperation({ summary: 'Get all news' })
   @ApiResponse({
     status: 200,
-    description: 'Danh sách tin tức',
+    description: 'List of news',
     type: News,
     isArray: true,
   })
@@ -29,11 +29,11 @@ export class NewsController {
   }
 
   @Get(':id')
-  @ApiOperation({ summary: 'Lấy chi tiết một tin tức theo ID' })
-  @ApiParam({ name: 'id', required: true, description: 'ID của tin tức' })
+  @ApiOperation({ summary: 'Get news details by ID' })
+  @ApiParam({ name: 'id', required: true, description: 'News ID' })
   @ApiResponse({
     status: 200,
-    description: 'Chi tiết tin tức',
+    description: 'News details',
     type: News,
   })
   async findOne(
@@ -42,12 +42,27 @@ export class NewsController {
     return this.newsService.findOne(id);
   }
 
-  @Delete(':id')
-  @ApiOperation({ summary: 'Xóa một tin tức theo ID' })
-  @ApiParam({ name: 'id', required: true, description: 'ID của tin tức' })
+  @Get('tag/:tagId')
+  @ApiOperation({ summary: 'Get news list by tagId' })
+  @ApiParam({ name: 'tagId', required: true, description: 'Tag ID' })
   @ApiResponse({
     status: 200,
-    description: 'Kết quả xóa tin tức',
+    description: 'News list by tag',
+    type: News,
+    isArray: true,
+  })
+  async findByTagId(
+    @Param('tagId') tagId: number,
+  ): Promise<{ error: boolean; data: News[]; message: string }> {
+    return this.newsService.findByTagId(tagId);
+  }
+
+  @Delete(':id')
+  @ApiOperation({ summary: 'Delete news by ID' })
+  @ApiParam({ name: 'id', required: true, description: 'News ID' })
+  @ApiResponse({
+    status: 200,
+    description: 'Delete news result',
   })
   async remove(
     @Param('id') id: number,

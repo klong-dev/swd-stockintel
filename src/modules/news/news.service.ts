@@ -19,13 +19,13 @@ export class NewsService {
       return {
         error: false,
         data,
-        message: 'Lấy danh sách tin tức thành công',
+        message: 'Get news list successfully',
       };
     } catch (e) {
       return {
         error: true,
         data: null,
-        message: 'Lỗi khi lấy danh sách tin tức',
+        message: 'Error while getting news list',
       };
     }
   }
@@ -34,11 +34,11 @@ export class NewsService {
     try {
       const data = await this.newsRepository.findOne({ where: { newsId: id } });
       if (!data) {
-        return { error: true, data: null, message: 'Không tìm thấy tin tức' };
+        return { error: true, data: null, message: 'News not found' };
       }
-      return { error: false, data, message: 'Lấy tin tức thành công' };
+      return { error: false, data, message: 'Get news successfully' };
     } catch (e) {
-      return { error: true, data: null, message: 'Lỗi khi lấy tin tức' };
+      return { error: true, data: null, message: 'Error while getting news' };
     }
   }
 
@@ -49,12 +49,32 @@ export class NewsService {
         return {
           error: true,
           data: null,
-          message: 'Không tìm thấy tin tức để xóa',
+          message: 'News not found to delete',
         };
       }
-      return { error: false, data: null, message: 'Xóa tin tức thành công' };
+      return { error: false, data: null, message: 'Delete news successfully' };
     } catch (e) {
-      return { error: true, data: null, message: 'Lỗi khi xóa tin tức' };
+      return { error: true, data: null, message: 'Error while deleting news' };
+    }
+  }
+
+  async findByTagId(tagId: number) {
+    try {
+      const data = await this.newsRepository.find({
+        where: { tag: { tagId } } as any,
+        relations: ['tag'],
+      });
+      return {
+        error: false,
+        data,
+        message: 'Get news list by tag successfully',
+      };
+    } catch (e) {
+      return {
+        error: true,
+        data: null,
+        message: 'Error while getting news by tag',
+      };
     }
   }
 }
