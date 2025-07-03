@@ -17,10 +17,10 @@ export class NewsController {
   constructor(private readonly newsService: NewsService) {}
 
   @Get()
-  @ApiOperation({ summary: 'Lấy danh sách tất cả tin tức' })
+  @ApiOperation({ summary: 'Get all news' })
   @ApiResponse({
     status: 200,
-    description: 'Danh sách tin tức',
+    description: 'List of news',
     type: News,
     isArray: true,
   })
@@ -29,11 +29,11 @@ export class NewsController {
   }
 
   @Get(':id')
-  @ApiOperation({ summary: 'Lấy chi tiết một tin tức theo ID' })
-  @ApiParam({ name: 'id', required: true, description: 'ID của tin tức' })
+  @ApiOperation({ summary: 'Get news details by ID' })
+  @ApiParam({ name: 'id', required: true, description: 'News ID' })
   @ApiResponse({
     status: 200,
-    description: 'Chi tiết tin tức',
+    description: 'News details',
     type: News,
   })
   async findOne(
@@ -43,11 +43,11 @@ export class NewsController {
   }
 
   @Get('tag/:tagId')
-  @ApiOperation({ summary: 'Lấy danh sách tin tức theo tagId' })
-  @ApiParam({ name: 'tagId', required: true, description: 'ID của tag' })
+  @ApiOperation({ summary: 'Get news list by tagId' })
+  @ApiParam({ name: 'tagId', required: true, description: 'Tag ID' })
   @ApiResponse({
     status: 200,
-    description: 'Danh sách tin tức theo tag',
+    description: 'News list by tag',
     type: News,
     isArray: true,
   })
@@ -58,11 +58,11 @@ export class NewsController {
   }
 
   @Delete(':id')
-  @ApiOperation({ summary: 'Xóa một tin tức theo ID' })
-  @ApiParam({ name: 'id', required: true, description: 'ID của tin tức' })
+  @ApiOperation({ summary: 'Delete news by ID' })
+  @ApiParam({ name: 'id', required: true, description: 'News ID' })
   @ApiResponse({
     status: 200,
-    description: 'Kết quả xóa tin tức',
+    description: 'Delete news result',
   })
   async remove(
     @Param('id') id: number,
