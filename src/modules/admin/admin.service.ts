@@ -9,6 +9,7 @@ import { AdminCreatePostDto } from './dto/admin-create-post.dto';
 import { AdminUpdatePostDto } from './dto/admin-update-post.dto';
 import { AdminPostFilterDto } from './dto/admin-post-filter.dto';
 import { Report } from '../report/entities/report.entity';
+import { User } from '../user/entities/user.entity';
 import { paginate } from '../../utils/pagination';
 import * as bcrypt from 'bcrypt';
 import { Admin } from './entities/admin.entity';
@@ -25,6 +26,8 @@ export class AdminService {
         private readonly reportRepository: Repository<Report>,
         @InjectRepository(Admin)
         private readonly adminRepository: Repository<Admin>,
+        @InjectRepository(User)
+        private readonly userRepository: Repository<User>,
         private readonly jwtService: JwtService,
     ) {
         this.redis = this.redisService.getClient();
@@ -139,7 +142,7 @@ export class AdminService {
 
             // Clear cache
             await this.removeFromCache('admin:posts:all*');
-            await this.removeFromCache('admin:posts:statistics');
+            await this.removeFromCache('admin:posts-users:statistics');
 
             return {
                 error: false,
@@ -208,7 +211,7 @@ export class AdminService {
             // Clear cache
             await this.removeFromCache(`admin:post:${id}`);
             await this.removeFromCache('admin:posts:all*');
-            await this.removeFromCache('admin:posts:statistics');
+            await this.removeFromCache('admin:posts-users:statistics');
 
             return {
                 error: false,
@@ -336,14 +339,14 @@ export class AdminService {
 
     async getPostsStatistics(): Promise<{ error: boolean; data: any; message: string }> {
         try {
-            const cacheKey = 'admin:posts:statistics';
+            const cacheKey = 'admin:posts-users:statistics';
             const cachedData = await this.getFromCache(cacheKey);
 
             if (cachedData) {
                 return {
                     error: false,
                     data: cachedData,
-                    message: 'Posts statistics fetched successfully (from cache)',
+                    message: 'Posts and users statistics fetched successfully (from cache)',
                 };
             }
 
@@ -361,6 +364,12 @@ export class AdminService {
                 postsToday,
                 postsThisWeek,
                 postsThisMonth,
+                totalUsers,
+                totalActiveUsers,
+                totalExperts,
+                usersToday,
+                usersThisWeek,
+                usersThisMonth,
             ] = await Promise.all([
                 this.postRepository.count(),
                 this.postRepository.createQueryBuilder('post')
@@ -382,9 +391,27 @@ export class AdminService {
                 this.postRepository.createQueryBuilder('post')
                     .where('post.createdAt >= :thisMonthStart', { thisMonthStart })
                     .getCount(),
+                // User statistics
+                this.userRepository.count(),
+                this.userRepository.createQueryBuilder('user')
+                    .where('user.status = :status', { status: 1 })
+                    .getCount(),
+                this.userRepository.createQueryBuilder('user')
+                    .where('user.isExpert = :isExpert', { isExpert: true })
+                    .getCount(),
+                this.userRepository.createQueryBuilder('user')
+                    .where('user.createdAt >= :today', { today })
+                    .getCount(),
+                this.userRepository.createQueryBuilder('user')
+                    .where('user.createdAt >= :thisWeekStart', { thisWeekStart })
+                    .getCount(),
+                this.userRepository.createQueryBuilder('user')
+                    .where('user.createdAt >= :thisMonthStart', { thisMonthStart })
+                    .getCount(),
             ]);
 
             const statistics = {
+                // Post statistics
                 totalPosts,
                 totalReportedPosts,
                 totalViewCount: parseInt(totalViewCount?.sum) || 0,
@@ -392,6 +419,13 @@ export class AdminService {
                 postsToday,
                 postsThisWeek,
                 postsThisMonth,
+                // User statistics
+                totalUsers,
+                totalActiveUsers,
+                totalExperts,
+                usersToday,
+                usersThisWeek,
+                usersThisMonth,
                 generatedAt: new Date(),
             };
 
@@ -400,13 +434,13 @@ export class AdminService {
             return {
                 error: false,
                 data: statistics,
-                message: 'Posts statistics fetched successfully',
+                message: 'Posts and users statistics fetched successfully',
             };
         } catch (e) {
             return {
                 error: true,
                 data: null,
-                message: e.message || 'Failed to fetch posts statistics',
+                message: e.message || 'Failed to fetch posts and users statistics',
             };
         }
     }
@@ -581,7 +615,7 @@ export class AdminService {
                 await this.removeFromCache(`admin:post:${postId}`);
             }
             await this.removeFromCache('admin:posts:all*');
-            await this.removeFromCache('admin:posts:statistics');
+            await this.removeFromCache('admin:posts-users:statistics');
 
             return {
                 error: false,

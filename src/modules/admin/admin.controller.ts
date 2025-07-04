@@ -32,8 +32,8 @@ export class AdminController {
     return this.adminService.getAllPosts(pageNum, pageSizeNum);
   }
 
-  @ApiOperation({ summary: 'Admin: Get posts statistics' })
-  @ApiResponse({ status: 200, description: 'Posts statistics fetched successfully' })
+  @ApiOperation({ summary: 'Admin: Get posts and users statistics' })
+  @ApiResponse({ status: 200, description: 'Posts and users statistics fetched successfully' })
   @UseGuards(AdminGuard)
   @Get('posts/statistics')
   async getPostsStatistics() {
