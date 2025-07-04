@@ -222,4 +222,90 @@ export class AdminController {
       message: 'Admin profile fetched successfully',
     };
   }
+
+  @ApiOperation({ summary: 'Admin: Get deleted users' })
+  @ApiQuery({ name: 'page', required: false, type: Number, description: 'Page number' })
+  @ApiQuery({ name: 'pageSize', required: false, type: Number, description: 'Number of users per page' })
+  @ApiResponse({ status: 200, description: 'Deleted users fetched successfully' })
+  @UseGuards(AdminGuard)
+  @Get('users/deleted')
+  async getDeletedUsers(
+    @Query('page') page?: string,
+    @Query('pageSize') pageSize?: string,
+  ) {
+    const pageNum = page ? parseInt(page, 10) : 1;
+    const pageSizeNum = pageSize ? parseInt(pageSize, 10) : 10;
+
+    // Validate parsed numbers
+    if (isNaN(pageNum) || pageNum < 1) {
+      return {
+        error: true,
+        data: null,
+        message: 'Invalid page number',
+      };
+    }
+
+    if (isNaN(pageSizeNum) || pageSizeNum < 1) {
+      return {
+        error: true,
+        data: null,
+        message: 'Invalid page size',
+      };
+    }
+
+    return this.adminService.getDeletedUsers(pageNum, pageSizeNum);
+  }
+
+  @ApiOperation({ summary: 'Admin: Delete user by ID (soft delete)' })
+  @ApiParam({ name: 'id', type: 'string', description: 'User ID' })
+  @ApiResponse({ status: 200, description: 'User deleted successfully' })
+  @ApiResponse({ status: 404, description: 'User not found' })
+  @UseGuards(AdminGuard)
+  @Delete('users/:id')
+  async deleteUser(@Param('id') id: string) {
+    return this.adminService.deleteUser(id);
+  }
+
+  @ApiOperation({ summary: 'Admin: Restore deleted user by ID' })
+  @ApiParam({ name: 'id', type: 'string', description: 'User ID' })
+  @ApiResponse({ status: 200, description: 'User restored successfully' })
+  @ApiResponse({ status: 404, description: 'User not found' })
+  @UseGuards(AdminGuard)
+  @Patch('users/:id/restore')
+  async restoreUser(@Param('id') id: string) {
+    return this.adminService.restoreUser(id);
+  }
+
+  @ApiOperation({ summary: 'Admin: Get all users with pagination' })
+  @ApiQuery({ name: 'page', required: false, type: Number, description: 'Page number' })
+  @ApiQuery({ name: 'pageSize', required: false, type: Number, description: 'Number of users per page' })
+  @ApiResponse({ status: 200, description: 'All users fetched successfully' })
+  @UseGuards(AdminGuard)
+  @Get('users')
+  async getAllUsers(
+    @Query('page') page?: string,
+    @Query('pageSize') pageSize?: string,
+  ) {
+    const pageNum = page ? parseInt(page, 10) : 1;
+    const pageSizeNum = pageSize ? parseInt(pageSize, 10) : 10;
+
+    // Validate parsed numbers
+    if (isNaN(pageNum) || pageNum < 1) {
+      return {
+        error: true,
+        data: null,
+        message: 'Invalid page number',
+      };
+    }
+
+    if (isNaN(pageSizeNum) || pageSizeNum < 1) {
+      return {
+        error: true,
+        data: null,
+        message: 'Invalid page size',
+      };
+    }
+
+    return this.adminService.getAllUsers(pageNum, pageSizeNum);
+  }
 }

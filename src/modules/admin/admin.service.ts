@@ -837,4 +837,162 @@ export class AdminService {
             user: payload,
         };
     }
+
+    async getDeletedUsers(page: number = 1, pageSize: number = 10): Promise<{ error: boolean; data: any; message: string }> {
+        try {
+            const cacheKey = `admin:users:deleted:${page}:${pageSize}`;
+            const cachedData = await this.getFromCache(cacheKey);
+
+            if (cachedData) {
+                return {
+                    error: false,
+                    data: cachedData,
+                    message: 'Deleted users fetched successfully (from cache)',
+                };
+            }
+
+            const [users, total] = await this.userRepository.findAndCount({
+                where: { status: 0 },
+                order: { createdAt: 'DESC' },
+                skip: (page - 1) * pageSize,
+                take: pageSize,
+            });
+
+            const result = {
+                users,
+                pagination: {
+                    page,
+                    pageSize,
+                    total,
+                    totalPages: Math.ceil(total / pageSize),
+                },
+            };
+
+            await this.setToCache(cacheKey, result, 300);
+
+            return {
+                error: false,
+                data: result,
+                message: 'Deleted users fetched successfully',
+            };
+        } catch (e) {
+            return {
+                error: true,
+                data: null,
+                message: e.message || 'Failed to fetch deleted users',
+            };
+        }
+    }
+
+    async deleteUser(id: string): Promise<{ error: boolean; data: any; message: string }> {
+        try {
+            const user = await this.userRepository.findOne({ where: { userId: id } });
+
+            if (!user) {
+                return {
+                    error: true,
+                    data: null,
+                    message: 'User not found',
+                };
+            }
+
+            // Soft delete: update status to 0
+            await this.userRepository.update(id, { status: 0 });
+            const updatedUser = await this.userRepository.findOne({ where: { userId: id } });
+
+            // Clear cache
+            await this.removeFromCache('admin:posts-users:statistics');
+
+            return {
+                error: false,
+                data: updatedUser,
+                message: 'User deleted successfully',
+            };
+        } catch (e) {
+            return {
+                error: true,
+                data: null,
+                message: e.message || 'Failed to delete user',
+            };
+        }
+    }
+
+    async restoreUser(id: string): Promise<{ error: boolean; data: any; message: string }> {
+        try {
+            const user = await this.userRepository.findOne({ where: { userId: id } });
+
+            if (!user) {
+                return {
+                    error: true,
+                    data: null,
+                    message: 'User not found',
+                };
+            }
+
+            // Restore user: update status to 1
+            await this.userRepository.update(id, { status: 1 });
+            const restoredUser = await this.userRepository.findOne({ where: { userId: id } });
+
+            // Clear cache
+            await this.removeFromCache('admin:posts-users:statistics');
+
+            return {
+                error: false,
+                data: restoredUser,
+                message: 'User restored successfully',
+            };
+        } catch (e) {
+            return {
+                error: true,
+                data: null,
+                message: e.message || 'Failed to restore user',
+            };
+        }
+    }
+
+    async getAllUsers(page: number = 1, pageSize: number = 10): Promise<{ error: boolean; data: any; message: string }> {
+        try {
+            const cacheKey = `admin:users:all:${page}:${pageSize}`;
+            const cachedData = await this.getFromCache(cacheKey);
+
+            if (cachedData) {
+                return {
+                    error: false,
+                    data: cachedData,
+                    message: 'All users fetched successfully (from cache)',
+                };
+            }
+
+            // Get all users including deleted ones for admin view
+            const [users, total] = await this.userRepository.findAndCount({
+                order: { createdAt: 'DESC' },
+                skip: (page - 1) * pageSize,
+                take: pageSize,
+            });
+
+            const result = {
+                users,
+                pagination: {
+                    page,
+                    pageSize,
+                    total,
+                    totalPages: Math.ceil(total / pageSize),
+                },
+            };
+
+            await this.setToCache(cacheKey, result, 300); // Cache for 5 minutes
+
+            return {
+                error: false,
+                data: result,
+                message: 'All users fetched successfully',
+            };
+        } catch (e) {
+            return {
+                error: true,
+                data: null,
+                message: e.message || 'Failed to fetch users',
+            };
+        }
+    }
 }
