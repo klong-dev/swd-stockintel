@@ -10,6 +10,9 @@ import { AdminUpdatePostDto } from './dto/admin-update-post.dto';
 import { AdminPostFilterDto } from './dto/admin-post-filter.dto';
 import { Report } from '../report/entities/report.entity';
 import { paginate } from '../../utils/pagination';
+import * as bcrypt from 'bcrypt';
+import { Admin } from './entities/admin.entity';
+import { JwtService } from '@nestjs/jwt';
 
 @Injectable()
 export class AdminService {
@@ -20,6 +23,9 @@ export class AdminService {
         private readonly postRepository: Repository<Post>,
         @InjectRepository(Report)
         private readonly reportRepository: Repository<Report>,
+        @InjectRepository(Admin)
+        private readonly adminRepository: Repository<Admin>,
+        private readonly jwtService: JwtService,
     ) {
         this.redis = this.redisService.getClient();
     }
@@ -290,17 +296,17 @@ export class AdminService {
                 };
             }
 
-            const [posts, total] = await this.postRepository.findAndCount({
-                relations: ['expert', 'stock', 'tag', 'reports', 'reports.user'],
-                where: {
-                    reports: {
-                        reportId: 'NOT NULL' as any,
-                    },
-                },
-                order: { createdAt: 'DESC' },
-                skip: (page - 1) * pageSize,
-                take: pageSize,
-            });
+            const [posts, total] = await this.postRepository.createQueryBuilder('post')
+                .leftJoinAndSelect('post.expert', 'expert')
+                .leftJoinAndSelect('post.stock', 'stock')
+                .leftJoinAndSelect('post.tag', 'tag')
+                .leftJoinAndSelect('post.reports', 'reports')
+                .leftJoinAndSelect('reports.user', 'reportUser')
+                .where('reports.reportId IS NOT NULL')
+                .orderBy('post.createdAt', 'DESC')
+                .skip((page - 1) * pageSize)
+                .take(pageSize)
+                .getManyAndCount();
 
             const result = {
                 posts,
@@ -341,6 +347,12 @@ export class AdminService {
                 };
             }
 
+            const now = new Date();
+            const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            const thisWeekStart = new Date(today);
+            thisWeekStart.setDate(today.getDate() - today.getDay());
+            const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+
             const [
                 totalPosts,
                 totalReportedPosts,
@@ -351,41 +363,36 @@ export class AdminService {
                 postsThisMonth,
             ] = await Promise.all([
                 this.postRepository.count(),
-                this.postRepository.count({
-                    relations: ['reports'],
-                    where: { reports: { reportId: 'NOT NULL' as any } },
-                }),
+                this.postRepository.createQueryBuilder('post')
+                    .leftJoin('post.reports', 'reports')
+                    .where('reports.reportId IS NOT NULL')
+                    .getCount(),
                 this.postRepository.createQueryBuilder('post')
                     .select('SUM(post.viewCount)', 'sum')
                     .getRawOne(),
                 this.postRepository.createQueryBuilder('post')
                     .select('SUM(post.likeCount)', 'sum')
                     .getRawOne(),
-                this.postRepository.count({
-                    where: {
-                        createdAt: 'CURDATE()' as any,
-                    },
-                }),
-                this.postRepository.count({
-                    where: {
-                        createdAt: 'WEEK(CURDATE())' as any,
-                    },
-                }),
-                this.postRepository.count({
-                    where: {
-                        createdAt: 'MONTH(CURDATE())' as any,
-                    },
-                }),
+                this.postRepository.createQueryBuilder('post')
+                    .where('post.createdAt >= :today', { today })
+                    .getCount(),
+                this.postRepository.createQueryBuilder('post')
+                    .where('post.createdAt >= :thisWeekStart', { thisWeekStart })
+                    .getCount(),
+                this.postRepository.createQueryBuilder('post')
+                    .where('post.createdAt >= :thisMonthStart', { thisMonthStart })
+                    .getCount(),
             ]);
 
             const statistics = {
                 totalPosts,
                 totalReportedPosts,
-                totalViewCount: totalViewCount?.sum || 0,
-                totalLikeCount: totalLikeCount?.sum || 0,
+                totalViewCount: parseInt(totalViewCount?.sum) || 0,
+                totalLikeCount: parseInt(totalLikeCount?.sum) || 0,
                 postsToday,
                 postsThisWeek,
                 postsThisMonth,
+                generatedAt: new Date(),
             };
 
             await this.setToCache(cacheKey, statistics, 600); // Cache for 10 minutes
@@ -588,5 +595,57 @@ export class AdminService {
                 message: e.message || 'Failed to bulk delete posts',
             };
         }
+    }
+
+    // Admin authentication
+    async adminLogin(loginDto: { username: string; password: string }): Promise<{ error: boolean; data: any; message: string }> {
+        try {
+            const { username, password } = loginDto;
+
+            // Find admin by username using Admin repository
+            const admin = await this.adminRepository.findOne({
+                where: { username, status: 1 }
+            });
+
+            if (!admin) {
+                return {
+                    error: true,
+                    data: null,
+                    message: 'Invalid credentials',
+                };
+            }
+
+            if (bcrypt.compareSync(password, admin.passwordHash) === false) {
+                return {
+                    error: true,
+                    data: null,
+                    message: 'Invalid credentials',
+                };
+            }
+
+            const tokenData = this.generateToken(admin);
+            return {
+                error: false,
+                data: tokenData,
+                message: 'Login successful',
+            };
+        } catch (e) {
+            return {
+                error: true,
+                data: null,
+                message: e.message || 'Login failed',
+            };
+        }
+    }
+    private generateToken(admin: Admin) {
+        const payload = {
+            adminId: admin.id,
+            username: admin.username,
+            status: admin.status,
+        };
+        return {
+            access_token: this.jwtService.sign(payload),
+            user: payload,
+        };
     }
 }
