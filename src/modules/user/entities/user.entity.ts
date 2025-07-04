@@ -27,8 +27,8 @@ export class User {
     @Column({ name: 'social_id', type: 'varchar', length: 100, nullable: true })
     socialId: string | null;
 
-    @Column({ name: 'status', type: 'varchar', length: 50, nullable: true })
-    status: string | null;
+    @Column({ name: 'status', type: 'int', default: 1, nullable: true })
+    status: number | null;
 
     @Column({ name: 'is_expert', type: 'boolean', default: false, nullable: true })
     isExpert: boolean | null;

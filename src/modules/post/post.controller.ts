@@ -172,16 +172,16 @@ export class PostController {
 
 
 
-  @ApiOperation({ summary: 'Delete a post by ID' })
+  @ApiOperation({ summary: 'Delete a post by ID (soft delete)' })
   @ApiParam({ name: 'id', type: Number })
   @ApiResponse({
     status: 200,
-    description: 'Post deleted successfully',
+    description: 'Post deleted successfully (soft delete)',
     schema: {
       example: {
         error: false,
-        data: {},
-        message: 'Post deleted successfully',
+        data: { postId: 1, title: 'Post title', status: 'deleted' },
+        message: 'Post deleted successfully (soft delete)',
       },
     },
   })
@@ -211,5 +211,46 @@ export class PostController {
   @Delete(':id')
   remove(@Param('id') id: string, @Req() req) {
     return this.postService.remove(+id, req.user);
+  }
+
+  @ApiOperation({ summary: 'Restore a post by ID' })
+  @ApiParam({ name: 'id', type: Number })
+  @ApiResponse({
+    status: 200,
+    description: 'Post restored successfully',
+    schema: {
+      example: {
+        error: false,
+        data: { postId: 1, title: 'Post title', status: 'active' },
+        message: 'Post restored successfully',
+      },
+    },
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Post not found.',
+    schema: {
+      example: {
+        error: true,
+        data: null,
+        message: 'Post not found',
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Failed to restore post.',
+    schema: {
+      example: {
+        error: true,
+        data: null,
+        message: 'Failed to restore post',
+      },
+    },
+  })
+  @UseGuards(JwtAuthGuard)
+  @Patch(':id/restore')
+  restore(@Param('id') id: string, @Req() req) {
+    return this.postService.restore(+id, req.user);
   }
 }

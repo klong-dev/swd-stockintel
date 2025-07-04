@@ -167,16 +167,16 @@ export class UserController {
     return this.userService.update(id, updateUserDto, req.user, avatarBuffer);
   }
 
-  @ApiOperation({ summary: 'Delete user by ID' })
+  @ApiOperation({ summary: 'Delete user by ID (soft delete)' })
   @ApiParam({ name: 'id', type: String })
   @ApiResponse({
     status: 200,
-    description: 'User deleted successfully',
+    description: 'User deleted successfully (soft delete)',
     schema: {
       example: {
         error: false,
-        data: {},
-        message: 'User deleted successfully',
+        data: { userId: '1', email: 'user@example.com', status: 0 },
+        message: 'User deleted successfully (soft delete)',
       },
     },
   })
@@ -206,5 +206,46 @@ export class UserController {
   @Delete(':id')
   remove(@Param('id') id: string, @Req() req) {
     return this.userService.remove(id, req.user);
+  }
+
+  @ApiOperation({ summary: 'Restore user by ID' })
+  @ApiParam({ name: 'id', type: String })
+  @ApiResponse({
+    status: 200,
+    description: 'User restored successfully',
+    schema: {
+      example: {
+        error: false,
+        data: { userId: '1', email: 'user@example.com', status: 1 },
+        message: 'User restored successfully',
+      },
+    },
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'User not found.',
+    schema: {
+      example: {
+        error: true,
+        data: null,
+        message: 'User not found',
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Failed to restore user.',
+    schema: {
+      example: {
+        error: true,
+        data: null,
+        message: 'Failed to restore user',
+      },
+    },
+  })
+  @UseGuards(JwtAuthGuard)
+  @Patch(':id/restore')
+  restore(@Param('id') id: string, @Req() req) {
+    return this.userService.restore(id, req.user);
   }
 }

@@ -9,6 +9,7 @@ import { AdminCreatePostDto } from './dto/admin-create-post.dto';
 import { AdminUpdatePostDto } from './dto/admin-update-post.dto';
 import { AdminPostFilterDto } from './dto/admin-post-filter.dto';
 import { Report } from '../report/entities/report.entity';
+import { User } from '../user/entities/user.entity';
 import { paginate } from '../../utils/pagination';
 import * as bcrypt from 'bcrypt';
 import { Admin } from './entities/admin.entity';
@@ -25,6 +26,8 @@ export class AdminService {
         private readonly reportRepository: Repository<Report>,
         @InjectRepository(Admin)
         private readonly adminRepository: Repository<Admin>,
+        @InjectRepository(User)
+        private readonly userRepository: Repository<User>,
         private readonly jwtService: JwtService,
     ) {
         this.redis = this.redisService.getClient();
@@ -57,6 +60,7 @@ export class AdminService {
                 };
             }
 
+            // Get all posts including deleted ones for admin view
             const [posts, total] = await this.postRepository.findAndCount({
                 relations: ['expert', 'stock', 'tag', 'comments', 'reports'],
                 order: { createdAt: 'DESC' },
@@ -139,7 +143,7 @@ export class AdminService {
 
             // Clear cache
             await this.removeFromCache('admin:posts:all*');
-            await this.removeFromCache('admin:posts:statistics');
+            await this.removeFromCache('admin:posts-users:statistics');
 
             return {
                 error: false,
@@ -203,23 +207,60 @@ export class AdminService {
                 };
             }
 
-            await this.postRepository.delete(id);
+            // Soft delete: update status to 'blocked'
+            await this.postRepository.update(id, { status: 'blocked' });
+            const updatedPost = await this.postRepository.findOne({ where: { postId: id } });
 
             // Clear cache
             await this.removeFromCache(`admin:post:${id}`);
             await this.removeFromCache('admin:posts:all*');
-            await this.removeFromCache('admin:posts:statistics');
+            await this.removeFromCache('admin:posts-users:statistics');
 
             return {
                 error: false,
-                data: { postId: id },
-                message: 'Post deleted successfully',
+                data: updatedPost,
+                message: 'Post blocked successfully',
             };
         } catch (e) {
             return {
                 error: true,
                 data: null,
-                message: e.message || 'Failed to delete post',
+                message: e.message || 'Failed to block post',
+            };
+        }
+    }
+
+    async restorePost(id: number): Promise<{ error: boolean; data: any; message: string }> {
+        try {
+            const post = await this.postRepository.findOne({ where: { postId: id } });
+
+            if (!post) {
+                return {
+                    error: true,
+                    data: null,
+                    message: 'Post not found',
+                };
+            }
+
+            // Restore post: update status to 'active'
+            await this.postRepository.update(id, { status: 'active' });
+            const restoredPost = await this.postRepository.findOne({ where: { postId: id } });
+
+            // Clear cache
+            await this.removeFromCache(`admin:post:${id}`);
+            await this.removeFromCache('admin:posts:all*');
+            await this.removeFromCache('admin:posts-users:statistics');
+
+            return {
+                error: false,
+                data: restoredPost,
+                message: 'Post restored successfully',
+            };
+        } catch (e) {
+            return {
+                error: true,
+                data: null,
+                message: e.message || 'Failed to restore post',
             };
         }
     }
@@ -334,16 +375,63 @@ export class AdminService {
         }
     }
 
-    async getPostsStatistics(): Promise<{ error: boolean; data: any; message: string }> {
+    async getDeletedPosts(page: number = 1, pageSize: number = 10): Promise<{ error: boolean; data: any; message: string }> {
         try {
-            const cacheKey = 'admin:posts:statistics';
+            const cacheKey = `admin:posts:blocked:${page}:${pageSize}`;
             const cachedData = await this.getFromCache(cacheKey);
 
             if (cachedData) {
                 return {
                     error: false,
                     data: cachedData,
-                    message: 'Posts statistics fetched successfully (from cache)',
+                    message: 'Blocked posts fetched successfully (from cache)',
+                };
+            }
+
+            const [posts, total] = await this.postRepository.findAndCount({
+                where: { status: 'blocked' },
+                relations: ['expert', 'stock', 'tag', 'comments', 'reports'],
+                order: { createdAt: 'DESC' },
+                skip: (page - 1) * pageSize,
+                take: pageSize,
+            });
+
+            const result = {
+                posts,
+                pagination: {
+                    page,
+                    pageSize,
+                    total,
+                    totalPages: Math.ceil(total / pageSize),
+                },
+            };
+
+            await this.setToCache(cacheKey, result, 300);
+
+            return {
+                error: false,
+                data: result,
+                message: 'Blocked posts fetched successfully',
+            };
+        } catch (e) {
+            return {
+                error: true,
+                data: null,
+                message: e.message || 'Failed to fetch blocked posts',
+            };
+        }
+    }
+
+    async getPostsStatistics(): Promise<{ error: boolean; data: any; message: string }> {
+        try {
+            const cacheKey = 'admin:posts-users:statistics';
+            const cachedData = await this.getFromCache(cacheKey);
+
+            if (cachedData) {
+                return {
+                    error: false,
+                    data: cachedData,
+                    message: 'Posts and users statistics fetched successfully (from cache)',
                 };
             }
 
@@ -355,14 +443,24 @@ export class AdminService {
 
             const [
                 totalPosts,
+                totalActivePosts,
+                totalBlockedPosts,
                 totalReportedPosts,
                 totalViewCount,
                 totalLikeCount,
                 postsToday,
                 postsThisWeek,
                 postsThisMonth,
+                totalUsers,
+                totalActiveUsers,
+                totalExperts,
+                usersToday,
+                usersThisWeek,
+                usersThisMonth,
             ] = await Promise.all([
                 this.postRepository.count(),
+                this.postRepository.count({ where: { status: 'active' } }),
+                this.postRepository.count({ where: { status: 'blocked' } }),
                 this.postRepository.createQueryBuilder('post')
                     .leftJoin('post.reports', 'reports')
                     .where('reports.reportId IS NOT NULL')
@@ -382,16 +480,43 @@ export class AdminService {
                 this.postRepository.createQueryBuilder('post')
                     .where('post.createdAt >= :thisMonthStart', { thisMonthStart })
                     .getCount(),
+                // User statistics
+                this.userRepository.count(),
+                this.userRepository.createQueryBuilder('user')
+                    .where('user.status = :status', { status: 1 })
+                    .getCount(),
+                this.userRepository.createQueryBuilder('user')
+                    .where('user.isExpert = :isExpert', { isExpert: true })
+                    .getCount(),
+                this.userRepository.createQueryBuilder('user')
+                    .where('user.createdAt >= :today', { today })
+                    .getCount(),
+                this.userRepository.createQueryBuilder('user')
+                    .where('user.createdAt >= :thisWeekStart', { thisWeekStart })
+                    .getCount(),
+                this.userRepository.createQueryBuilder('user')
+                    .where('user.createdAt >= :thisMonthStart', { thisMonthStart })
+                    .getCount(),
             ]);
 
             const statistics = {
+                // Post statistics
                 totalPosts,
+                totalActivePosts,
+                totalBlockedPosts,
                 totalReportedPosts,
                 totalViewCount: parseInt(totalViewCount?.sum) || 0,
                 totalLikeCount: parseInt(totalLikeCount?.sum) || 0,
                 postsToday,
                 postsThisWeek,
                 postsThisMonth,
+                // User statistics
+                totalUsers,
+                totalActiveUsers,
+                totalExperts,
+                usersToday,
+                usersThisWeek,
+                usersThisMonth,
                 generatedAt: new Date(),
             };
 
@@ -400,13 +525,13 @@ export class AdminService {
             return {
                 error: false,
                 data: statistics,
-                message: 'Posts statistics fetched successfully',
+                message: 'Posts and users statistics fetched successfully',
             };
         } catch (e) {
             return {
                 error: true,
                 data: null,
-                message: e.message || 'Failed to fetch posts statistics',
+                message: e.message || 'Failed to fetch posts and users statistics',
             };
         }
     }
@@ -475,11 +600,20 @@ export class AdminService {
                     case 'reported':
                         queryBuilder = queryBuilder.andWhere('reports.reportId IS NOT NULL');
                         break;
-                    case 'hidden':
-                        queryBuilder = queryBuilder.andWhere('post.viewCount = 0');
-                        break;
                     case 'active':
-                        queryBuilder = queryBuilder.andWhere('post.viewCount > 0');
+                        queryBuilder = queryBuilder.andWhere('post.status = :status', { status: 'active' });
+                        break;
+                    case 'hidden':
+                        queryBuilder = queryBuilder.andWhere('post.status = :status', { status: 'hidden' });
+                        break;
+                    case 'blocked':
+                        queryBuilder = queryBuilder.andWhere('post.status = :status', { status: 'blocked' });
+                        break;
+                    case 'deleted':
+                        queryBuilder = queryBuilder.andWhere('post.status = :status', { status: 'deleted' });
+                        break;
+                    case 'draft':
+                        queryBuilder = queryBuilder.andWhere('post.status = :status', { status: 'draft' });
                         break;
                 }
             }
@@ -574,25 +708,60 @@ export class AdminService {
                 };
             }
 
-            const result = await this.postRepository.delete(postIds);
+            // Soft delete: update status to 'blocked' for all posts
+            const result = await this.postRepository.update(postIds, { status: 'blocked' });
 
             // Clear cache for affected posts
             for (const postId of postIds) {
                 await this.removeFromCache(`admin:post:${postId}`);
             }
             await this.removeFromCache('admin:posts:all*');
-            await this.removeFromCache('admin:posts:statistics');
+            await this.removeFromCache('admin:posts-users:statistics');
 
             return {
                 error: false,
                 data: { affected: result.affected, postIds },
-                message: `${result.affected} posts deleted successfully`,
+                message: `${result.affected} posts blocked successfully`,
             };
         } catch (e) {
             return {
                 error: true,
                 data: null,
-                message: e.message || 'Failed to bulk delete posts',
+                message: e.message || 'Failed to bulk block posts',
+            };
+        }
+    }
+
+    async bulkRestorePosts(postIds: number[]): Promise<{ error: boolean; data: any; message: string }> {
+        try {
+            if (!postIds || postIds.length === 0) {
+                return {
+                    error: true,
+                    data: null,
+                    message: 'No post IDs provided',
+                };
+            }
+
+            // Restore posts: update status to 'active' for all posts
+            const result = await this.postRepository.update(postIds, { status: 'active' });
+
+            // Clear cache for affected posts
+            for (const postId of postIds) {
+                await this.removeFromCache(`admin:post:${postId}`);
+            }
+            await this.removeFromCache('admin:posts:all*');
+            await this.removeFromCache('admin:posts-users:statistics');
+
+            return {
+                error: false,
+                data: { affected: result.affected, postIds },
+                message: `${result.affected} posts restored successfully`,
+            };
+        } catch (e) {
+            return {
+                error: true,
+                data: null,
+                message: e.message || 'Failed to bulk restore posts',
             };
         }
     }

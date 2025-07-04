@@ -32,8 +32,8 @@ export class AdminController {
     return this.adminService.getAllPosts(pageNum, pageSizeNum);
   }
 
-  @ApiOperation({ summary: 'Admin: Get posts statistics' })
-  @ApiResponse({ status: 200, description: 'Posts statistics fetched successfully' })
+  @ApiOperation({ summary: 'Admin: Get posts and users statistics' })
+  @ApiResponse({ status: 200, description: 'Posts and users statistics fetched successfully' })
   @UseGuards(AdminGuard)
   @Get('posts/statistics')
   async getPostsStatistics() {
@@ -56,7 +56,7 @@ export class AdminController {
   }
 
   @ApiOperation({ summary: 'Admin: Get posts by status (reported posts)' })
-  @ApiQuery({ name: 'status', required: false, type: String, description: 'Post status filter (active, hidden, reported, draft, deleted, blocked)' })
+  @ApiQuery({ name: 'status', required: false, type: String, description: 'Post status filter (active, hidden, reported, draft, blocked, deleted)' })
   @ApiQuery({ name: 'page', required: false, type: Number, description: 'Page number' })
   @ApiQuery({ name: 'pageSize', required: false, type: Number, description: 'Number of posts per page' })
   @ApiResponse({ status: 200, description: 'Posts filtered by status' })
@@ -103,14 +103,39 @@ export class AdminController {
     return this.adminService.updatePost(id, updatePostDto);
   }
 
-  @ApiOperation({ summary: 'Admin: Delete post by ID' })
+  @ApiOperation({ summary: 'Admin: Delete post by ID (block post)' })
   @ApiParam({ name: 'id', type: 'number', description: 'Post ID' })
-  @ApiResponse({ status: 200, description: 'Post deleted successfully' })
+  @ApiResponse({ status: 200, description: 'Post blocked successfully' })
   @ApiResponse({ status: 404, description: 'Post not found' })
   @UseGuards(AdminGuard)
   @Delete('posts/:id')
   async deletePost(@Param('id', ParseIntPipe) id: number) {
     return this.adminService.deletePost(id);
+  }
+
+  @ApiOperation({ summary: 'Admin: Restore blocked post by ID' })
+  @ApiParam({ name: 'id', type: 'number', description: 'Post ID' })
+  @ApiResponse({ status: 200, description: 'Post restored successfully' })
+  @ApiResponse({ status: 404, description: 'Post not found' })
+  @UseGuards(AdminGuard)
+  @Patch('posts/:id/restore')
+  async restorePost(@Param('id', ParseIntPipe) id: number) {
+    return this.adminService.restorePost(id);
+  }
+
+  @ApiOperation({ summary: 'Admin: Get blocked posts' })
+  @ApiQuery({ name: 'page', required: false, type: Number, description: 'Page number' })
+  @ApiQuery({ name: 'pageSize', required: false, type: Number, description: 'Number of posts per page' })
+  @ApiResponse({ status: 200, description: 'Blocked posts fetched successfully' })
+  @UseGuards(AdminGuard)
+  @Get('posts/blocked')
+  async getDeletedPosts(
+    @Query('page') page?: string,
+    @Query('pageSize') pageSize?: string,
+  ) {
+    const pageNum = page ? parseInt(page, 10) : 1;
+    const pageSizeNum = pageSize ? parseInt(pageSize, 10) : 10;
+    return this.adminService.getDeletedPosts(pageNum, pageSizeNum);
   }
 
 
@@ -140,12 +165,20 @@ export class AdminController {
     return this.adminService.bulkUpdatePosts(bulkUpdateDto.postIds, bulkUpdateDto.updateData);
   }
 
-  @ApiOperation({ summary: 'Admin: Bulk delete posts' })
-  @ApiResponse({ status: 200, description: 'Posts deleted successfully' })
+  @ApiOperation({ summary: 'Admin: Bulk delete posts (block posts)' })
+  @ApiResponse({ status: 200, description: 'Posts blocked successfully' })
   @UseGuards(AdminGuard)
   @Delete('posts/bulk-delete')
   async bulkDeletePosts(@Body() bulkDeleteDto: BulkDeletePostDto) {
     return this.adminService.bulkDeletePosts(bulkDeleteDto.postIds);
+  }
+
+  @ApiOperation({ summary: 'Admin: Bulk restore posts (unblock posts)' })
+  @ApiResponse({ status: 200, description: 'Posts restored successfully' })
+  @UseGuards(AdminGuard)
+  @Patch('posts/bulk-restore')
+  async bulkRestorePosts(@Body() bulkDeleteDto: BulkDeletePostDto) {
+    return this.adminService.bulkRestorePosts(bulkDeleteDto.postIds);
   }
 
   @ApiOperation({ summary: 'Admin: Login' })
