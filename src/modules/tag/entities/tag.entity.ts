@@ -1,25 +1,44 @@
-import { Post } from 'src/modules/post/entities/post.entity';
-import { Entity, PrimaryGeneratedColumn, Column, OneToOne, JoinColumn } from 'typeorm';
+import { Post } from '../../post/entities/post.entity';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  OneToOne,
+  JoinColumn,
+  OneToMany,
+} from 'typeorm';
+import { News } from '../../news/entities/news.entity';
 
 @Entity()
 export class Tag {
-    @PrimaryGeneratedColumn({ name: 'tag_id' })
-    tagId: string;
+  @PrimaryGeneratedColumn({ name: 'tag_id' })
+  tagId: string;
 
-    @Column({ name: 'name', type: 'varchar', length: 100, unique: true })
-    name: string;
+  @Column({ name: 'name', type: 'varchar', length: 100, unique: true })
+  name: string;
 
-    @Column({ name: 'description', type: 'text', nullable: true })
-    description: string | null;
+  @Column({ name: 'description', type: 'text', nullable: true })
+  description: string | null;
 
-    @OneToOne(() => Post, post => post.tag, {
-        nullable: true
-    })
-    post: Post | null;
+  @OneToOne(() => Post, (post) => post.tag, {
+    nullable: true,
+  })
+  post: Post | null;
 
-    @Column({ name: 'created_at', type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
-    createdAt: Date;
+  @OneToMany(() => News, (news) => news.tag)
+  news: News[];
 
-    @Column({ name: 'updated_at', type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
-    updatedAt: Date;
+  @Column({
+    name: 'created_at',
+    type: 'timestamp',
+    default: () => 'CURRENT_TIMESTAMP',
+  })
+  createdAt: Date;
+
+  @Column({
+    name: 'updated_at',
+    type: 'timestamp',
+    default: () => 'CURRENT_TIMESTAMP',
+  })
+  updatedAt: Date;
 }
