@@ -284,11 +284,31 @@ export class AdminService {
                 .leftJoinAndSelect('post.tag', 'tag')
                 .leftJoinAndSelect('post.reports', 'reports');
 
+            // Apply status filters
             if (status) {
-                // You can add custom status logic here based on your requirements
-                // For now, we'll filter by reports existence as an example
-                if (status === 'reported') {
-                    queryBuilder = queryBuilder.where('reports.reportId IS NOT NULL');
+                switch (status) {
+                    case 'reported':
+                        queryBuilder = queryBuilder.where('reports.reportId IS NOT NULL');
+                        break;
+                    case 'active':
+                        queryBuilder = queryBuilder.where('post.status = :status', { status: 'active' });
+                        break;
+                    case 'hidden':
+                        queryBuilder = queryBuilder.where('post.status = :status', { status: 'hidden' });
+                        break;
+                    case 'blocked':
+                        queryBuilder = queryBuilder.where('post.status = :status', { status: 'blocked' });
+                        break;
+                    case 'deleted':
+                        queryBuilder = queryBuilder.where('post.status = :status', { status: 'deleted' });
+                        break;
+                    case 'draft':
+                        queryBuilder = queryBuilder.where('post.status = :status', { status: 'draft' });
+                        break;
+                    default:
+                        // If status is provided but not recognized, filter by the exact status value
+                        queryBuilder = queryBuilder.where('post.status = :status', { status });
+                        break;
                 }
             }
 
@@ -313,7 +333,7 @@ export class AdminService {
             return {
                 error: false,
                 data: result,
-                message: 'Posts filtered by status successfully',
+                message: `Posts filtered by status '${status || 'all'}' successfully`,
             };
         } catch (e) {
             return {
@@ -375,7 +395,7 @@ export class AdminService {
         }
     }
 
-    async getDeletedPosts(page: number = 1, pageSize: number = 10): Promise<{ error: boolean; data: any; message: string }> {
+    async getBlockedPosts(page: number = 1, pageSize: number = 10): Promise<{ error: boolean; data: any; message: string }> {
         try {
             const cacheKey = `admin:posts:blocked:${page}:${pageSize}`;
             const cachedData = await this.getFromCache(cacheKey);
