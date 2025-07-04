@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsInt } from 'class-validator';
+import { IsString, IsOptional, IsInt, IsIn } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreatePostDto {
@@ -15,4 +15,14 @@ export class CreatePostDto {
     @IsOptional()
     @IsInt()
     stockId?: number;
+
+    @ApiPropertyOptional({
+        description: 'Post status',
+        enum: ['active', 'hidden', 'reported', 'draft', 'deleted', 'blocked'],
+        default: 'active'
+    })
+    @IsOptional()
+    @IsString()
+    @IsIn(['active', 'hidden', 'reported', 'draft', 'deleted', 'blocked'])
+    status?: string;
 }
