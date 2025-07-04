@@ -56,7 +56,7 @@ export class AdminController {
   }
 
   @ApiOperation({ summary: 'Admin: Get posts by status (reported posts)' })
-  @ApiQuery({ name: 'status', required: false, type: String, description: 'Post status filter' })
+  @ApiQuery({ name: 'status', required: false, type: String, description: 'Post status filter (active, hidden, reported, draft, deleted, blocked)' })
   @ApiQuery({ name: 'page', required: false, type: Number, description: 'Page number' })
   @ApiQuery({ name: 'pageSize', required: false, type: Number, description: 'Number of posts per page' })
   @ApiResponse({ status: 200, description: 'Posts filtered by status' })
