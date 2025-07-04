@@ -55,6 +55,39 @@ export class AdminController {
     return this.adminService.getReportedPosts(pageNum, pageSizeNum);
   }
 
+  @ApiOperation({ summary: 'Admin: Get blocked posts' })
+  @ApiQuery({ name: 'page', required: false, type: Number, description: 'Page number' })
+  @ApiQuery({ name: 'pageSize', required: false, type: Number, description: 'Number of posts per page' })
+  @ApiResponse({ status: 200, description: 'Blocked posts fetched successfully' })
+  @UseGuards(AdminGuard)
+  @Get('posts/blocked')
+  async getBlockedPosts(
+    @Query('page') page?: string,
+    @Query('pageSize') pageSize?: string,
+  ) {
+    const pageNum = page ? parseInt(page, 10) : 1;
+    const pageSizeNum = pageSize ? parseInt(pageSize, 10) : 10;
+
+    // Validate parsed numbers
+    if (isNaN(pageNum) || pageNum < 1) {
+      return {
+        error: true,
+        data: null,
+        message: 'Invalid page number',
+      };
+    }
+
+    if (isNaN(pageSizeNum) || pageSizeNum < 1) {
+      return {
+        error: true,
+        data: null,
+        message: 'Invalid page size',
+      };
+    }
+
+    return this.adminService.getBlockedPosts(pageNum, pageSizeNum);
+  }
+
   @ApiOperation({ summary: 'Admin: Get posts by status (reported posts)' })
   @ApiQuery({ name: 'status', required: false, type: String, description: 'Post status filter (active, hidden, reported, draft, blocked, deleted)' })
   @ApiQuery({ name: 'page', required: false, type: Number, description: 'Page number' })
@@ -122,41 +155,6 @@ export class AdminController {
   async restorePost(@Param('id', ParseIntPipe) id: number) {
     return this.adminService.restorePost(id);
   }
-
-  @ApiOperation({ summary: 'Admin: Get blocked posts' })
-  @ApiQuery({ name: 'page', required: false, type: Number, description: 'Page number' })
-  @ApiQuery({ name: 'pageSize', required: false, type: Number, description: 'Number of posts per page' })
-  @ApiResponse({ status: 200, description: 'Blocked posts fetched successfully' })
-  @UseGuards(AdminGuard)
-  @Get('posts/blocked')
-  async getBlockedPosts(
-    @Query('page') page?: string,
-    @Query('pageSize') pageSize?: string,
-  ) {
-    const pageNum = page ? parseInt(page, 10) : 1;
-    const pageSizeNum = pageSize ? parseInt(pageSize, 10) : 10;
-
-    // Validate parsed numbers
-    if (isNaN(pageNum) || pageNum < 1) {
-      return {
-        error: true,
-        data: null,
-        message: 'Invalid page number',
-      };
-    }
-
-    if (isNaN(pageSizeNum) || pageSizeNum < 1) {
-      return {
-        error: true,
-        data: null,
-        message: 'Invalid page size',
-      };
-    }
-
-    return this.adminService.getBlockedPosts(pageNum, pageSizeNum);
-  }
-
-
 
   @ApiOperation({ summary: 'Admin: Toggle post visibility/status' })
   @ApiParam({ name: 'id', type: 'number', description: 'Post ID' })
