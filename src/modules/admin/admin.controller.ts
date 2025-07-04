@@ -129,13 +129,31 @@ export class AdminController {
   @ApiResponse({ status: 200, description: 'Blocked posts fetched successfully' })
   @UseGuards(AdminGuard)
   @Get('posts/blocked')
-  async getDeletedPosts(
+  async getBlockedPosts(
     @Query('page') page?: string,
     @Query('pageSize') pageSize?: string,
   ) {
     const pageNum = page ? parseInt(page, 10) : 1;
     const pageSizeNum = pageSize ? parseInt(pageSize, 10) : 10;
-    return this.adminService.getDeletedPosts(pageNum, pageSizeNum);
+
+    // Validate parsed numbers
+    if (isNaN(pageNum) || pageNum < 1) {
+      return {
+        error: true,
+        data: null,
+        message: 'Invalid page number',
+      };
+    }
+
+    if (isNaN(pageSizeNum) || pageSizeNum < 1) {
+      return {
+        error: true,
+        data: null,
+        message: 'Invalid page size',
+      };
+    }
+
+    return this.adminService.getBlockedPosts(pageNum, pageSizeNum);
   }
 
 
