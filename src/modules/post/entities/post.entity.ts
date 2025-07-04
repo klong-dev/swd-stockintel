@@ -50,6 +50,9 @@ export class Post {
     @JoinColumn({ name: 'tagId' })
     tag: Tag | null;
 
+    @Column({ name: 'status', type: 'enum', enum: ['active', 'hidden', 'reported', 'draft', 'deleted', 'blocked'], default: 'active' })
+    status: string;
+
     @ManyToOne(() => Stock, stock => stock.posts)
     @JoinColumn({ name: 'stock_id' })
     stock: Stock;
