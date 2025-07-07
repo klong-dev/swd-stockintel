@@ -207,8 +207,8 @@ export class AdminService {
                 };
             }
 
-            // Soft delete: update status to 'blocked'
-            await this.postRepository.update(id, { status: 'blocked' });
+            // Soft delete: update status to 'BLOCKED'
+            await this.postRepository.update(id, { status: 'BLOCKED' });
             const updatedPost = await this.postRepository.findOne({ where: { postId: id } });
 
             // Clear cache
@@ -242,8 +242,8 @@ export class AdminService {
                 };
             }
 
-            // Restore post: update status to 'active'
-            await this.postRepository.update(id, { status: 'active' });
+            // Restore post: update status to 'ACTIVE'
+            await this.postRepository.update(id, { status: 'ACTIVE' });
             const restoredPost = await this.postRepository.findOne({ where: { postId: id } });
 
             // Clear cache
@@ -287,20 +287,20 @@ export class AdminService {
             // Apply status filters
             if (status) {
                 switch (status) {
-                    case 'reported':
+                    case 'REPORTED':
                         queryBuilder = queryBuilder.where('reports.reportId IS NOT NULL');
                         break;
-                    case 'active':
-                        queryBuilder = queryBuilder.where('post.status = :status', { status: 'active' });
+                    case 'ACTIVE':
+                        queryBuilder = queryBuilder.where('post.status = :status', { status: 'ACTIVE' });
                         break;
                     case 'hidden':
                         queryBuilder = queryBuilder.where('post.status = :status', { status: 'hidden' });
                         break;
-                    case 'blocked':
-                        queryBuilder = queryBuilder.where('post.status = :status', { status: 'blocked' });
+                    case 'BLOCKED':
+                        queryBuilder = queryBuilder.where('post.status = :status', { status: 'BLOCKED' });
                         break;
-                    case 'deleted':
-                        queryBuilder = queryBuilder.where('post.status = :status', { status: 'deleted' });
+                    case 'DELETED':
+                        queryBuilder = queryBuilder.where('post.status = :status', { status: 'DELETED' });
                         break;
                     case 'draft':
                         queryBuilder = queryBuilder.where('post.status = :status', { status: 'draft' });
@@ -409,7 +409,7 @@ export class AdminService {
             }
 
             const [posts, total] = await this.postRepository.findAndCount({
-                where: { status: 'blocked' },
+                where: { status: 'BLOCKED' },
                 relations: ['expert', 'stock', 'tag', 'comments', 'reports'],
                 order: { createdAt: 'DESC' },
                 skip: (page - 1) * pageSize,
@@ -479,8 +479,8 @@ export class AdminService {
                 usersThisMonth,
             ] = await Promise.all([
                 this.postRepository.count(),
-                this.postRepository.count({ where: { status: 'active' } }),
-                this.postRepository.count({ where: { status: 'blocked' } }),
+                this.postRepository.count({ where: { status: 'ACTIVE' } }),
+                this.postRepository.count({ where: { status: 'BLOCKED' } }),
                 this.postRepository.createQueryBuilder('post')
                     .leftJoin('post.reports', 'reports')
                     .where('reports.reportId IS NOT NULL')
@@ -617,23 +617,23 @@ export class AdminService {
             // Apply filters
             if (status) {
                 switch (status) {
-                    case 'reported':
+                    case 'REPORTED':
                         queryBuilder = queryBuilder.andWhere('reports.reportId IS NOT NULL');
                         break;
-                    case 'active':
-                        queryBuilder = queryBuilder.andWhere('post.status = :status', { status: 'active' });
+                    case 'ACTIVE':
+                        queryBuilder = queryBuilder.andWhere('post.status = :status', { status: 'ACTIVE' });
                         break;
-                    case 'hidden':
-                        queryBuilder = queryBuilder.andWhere('post.status = :status', { status: 'hidden' });
+                    case 'HIDDEN':
+                        queryBuilder = queryBuilder.andWhere('post.status = :status', { status: 'HIDDEN' });
                         break;
-                    case 'blocked':
-                        queryBuilder = queryBuilder.andWhere('post.status = :status', { status: 'blocked' });
+                    case 'BLOCKED':
+                        queryBuilder = queryBuilder.andWhere('post.status = :status', { status: 'BLOCKED' });
                         break;
-                    case 'deleted':
-                        queryBuilder = queryBuilder.andWhere('post.status = :status', { status: 'deleted' });
+                    case 'DELETED':
+                        queryBuilder = queryBuilder.andWhere('post.status = :status', { status: 'DELETED' });
                         break;
-                    case 'draft':
-                        queryBuilder = queryBuilder.andWhere('post.status = :status', { status: 'draft' });
+                    case 'DRAFT':
+                        queryBuilder = queryBuilder.andWhere('post.status = :status', { status: 'DRAFT' });
                         break;
                 }
             }
@@ -762,8 +762,8 @@ export class AdminService {
                 };
             }
 
-            // Restore posts: update status to 'active' for all posts
-            const result = await this.postRepository.update(postIds, { status: 'active' });
+            // Restore posts: update status to 'ACTIVE' for all posts
+            const result = await this.postRepository.update(postIds, { status: 'ACTIVE' });
 
             // Clear cache for affected posts
             for (const postId of postIds) {
