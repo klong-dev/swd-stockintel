@@ -16,6 +16,9 @@ export class Stock {
 
     @Column({ name: 'stock_exchange_id', type: 'int', nullable: true })
     stockExchangeId: number | null;
+    
+    @Column({ name: 'url', type: 'varchar', length: 255, nullable: true })
+    url: string | null;
 
     @ManyToOne(() => StockExchange, stockExchange => stockExchange.stocks)
     @JoinColumn({ name: 'stock_exchange_id' })

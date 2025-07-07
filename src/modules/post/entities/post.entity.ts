@@ -1,9 +1,8 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToMany, JoinColumn, OneToOne } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToMany, JoinColumn } from 'typeorm';
 import { User } from '../../user/entities/user.entity';
 import { Stock } from '../../stock/entities/stock.entity';
 import { Comment } from '../../comment/entities/comment.entity';
 import { Report } from '../../report/entities/report.entity';
-import { Tag } from '../../tag/entities/tag.entity';
 
 @Entity('post')
 export class Post {
@@ -44,13 +43,16 @@ export class Post {
     @JoinColumn({ name: 'expert_id' })
     expert: User;
 
-    @OneToOne(() => Tag, tag => tag.post, {
-        nullable: true
-    })
-    @JoinColumn({ name: 'tagId' })
-    tag: Tag | null;
+    @Column({ name: 'sentiment', type: 'enum', enum: ['POSITIVE', 'NEGATIVE', 'NEUTRAL'], nullable: true, default: 'NEUTRAL' })
+    sentiment: 'POSITIVE' | 'NEGATIVE' | 'NEUTRAL';
 
-    @Column({ name: 'status', type: 'enum', enum: ['active', 'hidden', 'reported', 'draft', 'deleted', 'blocked'], default: 'active' })
+    @Column({ name: 'level', type: 'enum', enum: ['SYMBOL', 'MARKET'], nullable: true, default: 'SYMBOL' })
+    level: 'SYMBOL' | 'MARKET';
+
+    @Column({ name: 'topic', type: 'varchar', length: 100, nullable: true })
+    topic: string | null;
+
+    @Column({ name: 'status', type: 'enum', enum: ['PENDING', 'ACTIVE', 'DELETED', 'BLOCKED'], default: 'PENDING' })
     status: string;
 
     @ManyToOne(() => Stock, stock => stock.posts)
