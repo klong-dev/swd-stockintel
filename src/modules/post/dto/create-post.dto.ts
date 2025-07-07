@@ -18,11 +18,11 @@ export class CreatePostDto {
 
     @ApiPropertyOptional({
         description: 'Post status',
-        enum: ['ACTIVE', 'PENDING', 'DELETED'],
+        enum: ['ACTIVE', 'PENDING', 'DELETED', 'BLOCKED'],
         default: 'ACTIVE'
     })
     @IsOptional()
     @IsString()
-    @IsIn(['ACTIVE', 'PENDING', 'DELETED'])
+    @IsIn(['ACTIVE', 'PENDING', 'DELETED', 'BLOCKED'])
     status?: string;
 }
