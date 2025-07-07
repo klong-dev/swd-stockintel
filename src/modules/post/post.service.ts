@@ -153,7 +153,7 @@ export class PostService {
             const cacheKey = `posts:${id}`;
             const cached = await this.getFromCache<Post>(cacheKey);
             if (cached) return { error: false, result: cached, message: 'Post fetched successfully (from cache)' };
-            const result = await this.postRepository.findOne({ where: { postId: id }, relations: [ 'expert'] });
+            const result = await this.postRepository.findOne({ where: { postId: id }, relations: ['expert'] });
             if (result) await this.setToCache(cacheKey, result);
             if (!result) return { error: true, data: null, message: 'Post not found' };
             return {
@@ -203,8 +203,8 @@ export class PostService {
             if (!post) return { error: true, data: null, message: 'Post not found' };
             if (post.expertId !== user.userId) return { error: true, data: null, message: 'You can only delete your own posts' };
 
-            // Soft delete: update status to 'deleted'
-            await this.postRepository.update(id, { status: 'deleted' });
+            // Soft delete: update status to 'DELETED'
+            await this.postRepository.update(id, { status: 'DELETED' });
             const updatedPost = await this.postRepository.findOne({ where: { postId: id } });
 
             await this.removeFromCache('posts:all');
