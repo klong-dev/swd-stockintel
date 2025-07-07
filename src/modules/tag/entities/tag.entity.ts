@@ -20,9 +20,6 @@ export class Tag {
   @Column({ name: 'description', type: 'text', nullable: true })
   description: string | null;
 
-  @OneToOne(() => Post, (post) => post.tag, {
-    nullable: true,
-  })
   post: Post | null;
 
   @OneToMany(() => News, (news) => news.tag)
