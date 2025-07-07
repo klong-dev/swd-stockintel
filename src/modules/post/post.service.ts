@@ -65,8 +65,8 @@ export class PostService {
         try {
             // Only get active posts (not deleted)
             const data = await this.postRepository.find({
-                where: { status: 'active' },
-                relations: ['tag', 'expert']
+                where: { status: 'ACTIVE' },
+                relations: ['expert']
             });
             const paginated = paginate(data, page, pageSize);
             return {
@@ -108,8 +108,8 @@ export class PostService {
         try {
             // Get only deleted posts
             const data = await this.postRepository.find({
-                where: { status: 'deleted' },
-                relations: ['tag', 'expert']
+                where: { status: 'DELETED' },
+                relations: ['expert']
             });
             const paginated = paginate(data, page, pageSize);
             return {
@@ -129,10 +129,10 @@ export class PostService {
     async findTopViewed(size: number = 10): Promise<{ error: boolean; data: any; message: string }> {
         try {
             const data = await this.postRepository.find({
-                where: { status: 'active' },
+                where: { status: 'ACTIVE' },
                 order: { viewCount: 'DESC' },
                 take: size,
-                relations: ['tag', 'expert']
+                relations: ['expert']
             });
             return {
                 error: false,
@@ -153,7 +153,7 @@ export class PostService {
             const cacheKey = `posts:${id}`;
             const cached = await this.getFromCache<Post>(cacheKey);
             if (cached) return { error: false, result: cached, message: 'Post fetched successfully (from cache)' };
-            const result = await this.postRepository.findOne({ where: { postId: id }, relations: ['tag', 'expert'] });
+            const result = await this.postRepository.findOne({ where: { postId: id }, relations: [ 'expert'] });
             if (result) await this.setToCache(cacheKey, result);
             if (!result) return { error: true, data: null, message: 'Post not found' };
             return {
@@ -230,7 +230,7 @@ export class PostService {
             if (post.expertId !== user.userId) return { error: true, data: null, message: 'You can only restore your own posts' };
 
             // Restore post: update status to 'active'
-            await this.postRepository.update(id, { status: 'active' });
+            await this.postRepository.update(id, { status: 'ACTIVE' });
             const restoredPost = await this.postRepository.findOne({ where: { postId: id } });
 
             await this.removeFromCache('posts:all');
