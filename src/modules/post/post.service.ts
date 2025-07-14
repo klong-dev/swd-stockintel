@@ -63,8 +63,10 @@ export class PostService {
 
     async findAll(page: number = 1, pageSize: number = 10): Promise<{ error: boolean; data: any; message: string }> {
         try {
+            // Only get active posts (not deleted)
             const data = await this.postRepository.find({
-                relations: ['tag', 'expert']
+                where: { status: 'ACTIVE' },
+                relations: ['expert']
             });
             const paginated = paginate(data, page, pageSize);
             return {
@@ -81,17 +83,61 @@ export class PostService {
         }
     }
 
+    async findAllIncludingDeleted(page: number = 1, pageSize: number = 10): Promise<{ error: boolean; data: any; message: string }> {
+        try {
+            // Get all posts including deleted ones
+            const data = await this.postRepository.find({
+                relations: ['tag', 'expert']
+            });
+            const paginated = paginate(data, page, pageSize);
+            return {
+                error: false,
+                data: paginated,
+                message: 'All posts (including deleted) fetched successfully',
+            };
+        } catch (e) {
+            return {
+                error: true,
+                data: null,
+                message: e.message || 'Failed to fetch posts',
+            };
+        }
+    }
+
+    async findDeletedPosts(page: number = 1, pageSize: number = 10): Promise<{ error: boolean; data: any; message: string }> {
+        try {
+            // Get only deleted posts
+            const data = await this.postRepository.find({
+                where: { status: 'DELETED' },
+                relations: ['expert']
+            });
+            const paginated = paginate(data, page, pageSize);
+            return {
+                error: false,
+                data: paginated,
+                message: 'Deleted posts fetched successfully',
+            };
+        } catch (e) {
+            return {
+                error: true,
+                data: null,
+                message: e.message || 'Failed to fetch deleted posts',
+            };
+        }
+    }
+
     async findTopViewed(size: number = 10): Promise<{ error: boolean; data: any; message: string }> {
         try {
             const data = await this.postRepository.find({
+                where: { status: 'ACTIVE' },
                 order: { viewCount: 'DESC' },
                 take: size,
-                relations: ['tag', 'expert']
+                relations: ['expert']
             });
             return {
                 error: false,
                 data: data,
-                message: 'All posts fetched successfully',
+                message: 'Top viewed posts fetched successfully',
             };
         } catch (e) {
             return {
@@ -107,7 +153,7 @@ export class PostService {
             const cacheKey = `posts:${id}`;
             const cached = await this.getFromCache<Post>(cacheKey);
             if (cached) return { error: false, result: cached, message: 'Post fetched successfully (from cache)' };
-            const result = await this.postRepository.findOne({ where: { postId: id }, relations: ['tag', 'expert'] });
+            const result = await this.postRepository.findOne({ where: { postId: id }, relations: ['expert'] });
             if (result) await this.setToCache(cacheKey, result);
             if (!result) return { error: true, data: null, message: 'Post not found' };
             return {
@@ -156,19 +202,49 @@ export class PostService {
             const post = await this.postRepository.findOne({ where: { postId: id } });
             if (!post) return { error: true, data: null, message: 'Post not found' };
             if (post.expertId !== user.userId) return { error: true, data: null, message: 'You can only delete your own posts' };
-            const data = await this.postRepository.delete(id);
+
+            // Soft delete: update status to 'DELETED'
+            await this.postRepository.update(id, { status: 'DELETED' });
+            const updatedPost = await this.postRepository.findOne({ where: { postId: id } });
+
             await this.removeFromCache('posts:all');
             await this.removeFromCache(`posts:${id}`);
             return {
                 error: false,
-                data,
-                message: 'Post deleted successfully',
+                data: updatedPost,
+                message: 'Post deleted successfully (soft delete)',
             };
         } catch (e) {
             return {
                 error: true,
                 data: null,
                 message: e.message || 'Failed to delete post',
+            };
+        }
+    }
+
+    async restore(id: number, user: any) {
+        try {
+            const post = await this.postRepository.findOne({ where: { postId: id } });
+            if (!post) return { error: true, data: null, message: 'Post not found' };
+            if (post.expertId !== user.userId) return { error: true, data: null, message: 'You can only restore your own posts' };
+
+            // Restore post: update status to 'active'
+            await this.postRepository.update(id, { status: 'ACTIVE' });
+            const restoredPost = await this.postRepository.findOne({ where: { postId: id } });
+
+            await this.removeFromCache('posts:all');
+            await this.removeFromCache(`posts:${id}`);
+            return {
+                error: false,
+                data: restoredPost,
+                message: 'Post restored successfully',
+            };
+        } catch (e) {
+            return {
+                error: true,
+                data: null,
+                message: e.message || 'Failed to restore post',
             };
         }
     }

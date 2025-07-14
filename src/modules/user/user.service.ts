@@ -42,12 +42,37 @@ export class UserService {
 
     async findAll(page: number = 1, pageSize: number = 10): Promise<{ error: boolean; data: any; message: string }> {
         try {
-            const users = await this.userRepository.find();
+            // Only get active users (status = 1 or null)
+            const users = await this.userRepository.find({
+                where: [
+                    { status: 1 },
+                    { status: null }
+                ]
+            });
             const paginated = paginate(users, page, pageSize);
             return {
                 error: false,
                 data: paginated,
                 message: 'All users fetched successfully',
+            };
+        } catch (e) {
+            return {
+                error: true,
+                data: null,
+                message: e.message || 'Failed to fetch users',
+            };
+        }
+    }
+
+    async findAllIncludingDeleted(page: number = 1, pageSize: number = 10): Promise<{ error: boolean; data: any; message: string }> {
+        try {
+            // Get all users including deleted ones
+            const users = await this.userRepository.find();
+            const paginated = paginate(users, page, pageSize);
+            return {
+                error: false,
+                data: paginated,
+                message: 'All users (including deleted) fetched successfully',
             };
         } catch (e) {
             return {
@@ -100,17 +125,43 @@ export class UserService {
     async remove(id: string, user: any) {
         try {
             if (user.userId !== id) return { error: true, data: null, message: 'You can only delete your own profile' };
-            const data = await this.userRepository.delete(id);
+
+            // Soft delete: update status to 0
+            await this.userRepository.update(id, { status: 0 });
+            const updatedUser = await this.userRepository.findOne({ where: { userId: id } });
+
             return {
                 error: false,
-                data,
-                message: 'User deleted successfully',
+                data: updatedUser,
+                message: 'User deleted successfully (soft delete)',
             };
         } catch (e) {
             return {
                 error: true,
                 data: null,
                 message: e.message || 'Failed to delete user',
+            };
+        }
+    }
+
+    async restore(id: string, user: any) {
+        try {
+            if (user.userId !== id) return { error: true, data: null, message: 'You can only restore your own profile' };
+
+            // Restore user: update status to 1
+            await this.userRepository.update(id, { status: 1 });
+            const restoredUser = await this.userRepository.findOne({ where: { userId: id } });
+
+            return {
+                error: false,
+                data: restoredUser,
+                message: 'User restored successfully',
+            };
+        } catch (e) {
+            return {
+                error: true,
+                data: null,
+                message: e.message || 'Failed to restore user',
             };
         }
     }

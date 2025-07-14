@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsEmail } from 'class-validator';
+import { IsString, IsOptional, IsEmail, IsInt } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateUserDto {
@@ -31,8 +31,8 @@ export class CreateUserDto {
     @IsString()
     socialId?: string;
 
-    @ApiPropertyOptional({ description: 'User status' })
+    @ApiPropertyOptional({ description: 'User status (1 = active, 0 = inactive)' })
     @IsOptional()
-    @IsString()
-    status?: string;
+    @IsInt()
+    status?: number;
 }
