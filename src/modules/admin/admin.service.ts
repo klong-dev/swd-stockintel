@@ -410,7 +410,7 @@ export class AdminService {
 
             const [posts, total] = await this.postRepository.findAndCount({
                 where: { status: 'BLOCKED' },
-                relations: ['expert', 'stock', 'tag', 'comments', 'reports'],
+                relations: ['expert', 'stock', 'comments', 'reports'],
                 order: { createdAt: 'DESC' },
                 skip: (page - 1) * pageSize,
                 take: pageSize,
