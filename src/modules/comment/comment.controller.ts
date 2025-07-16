@@ -290,4 +290,73 @@ export class CommentController {
   ) {
     return this.commentService.getReplies(+id, Number(page), Number(pageSize));
   }
+
+  @ApiOperation({ summary: 'Get comments by post ID' })
+  @ApiParam({ name: 'postId', type: Number, description: 'ID of the post to get comments for' })
+  @ApiResponse({
+    status: 200,
+    description: 'Comments for post fetched successfully',
+    schema: {
+      example: {
+        error: false,
+        data: {
+          items: [
+            {
+              commentId: 1,
+              content: 'This is a comment on the post',
+              userId: 'user123',
+              postId: 1,
+              parentCommentId: null,
+              createdAt: '2025-07-16T17:30:00Z',
+              user: { userId: 'user123', fullName: 'John Doe', avatarUrl: 'avatar.jpg' },
+              replies: [
+                {
+                  commentId: 2,
+                  content: 'This is a reply',
+                  userId: 'user456',
+                  parentCommentId: 1,
+                  user: { userId: 'user456', fullName: 'Jane Smith' }
+                }
+              ]
+            }
+          ],
+          total: 1,
+          page: 1,
+          pageSize: 10
+        },
+        message: 'Comments for post fetched successfully',
+      },
+    },
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Post not found.',
+    schema: {
+      example: {
+        error: true,
+        data: null,
+        message: 'Post not found',
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Failed to fetch comments for post.',
+    schema: {
+      example: {
+        error: true,
+        data: null,
+        message: 'Failed to fetch comments for post',
+      },
+    },
+  })
+  @Get('post/:postId')
+  getCommentsByPostId(
+    @Param('postId') postId: string,
+    @Query('page') page: string = '1',
+    @Query('pageSize') pageSize: string = '10',
+    @Query('includeReplies') includeReplies: string = 'true'
+  ) {
+    return this.commentService.getCommentsByPostId(+postId, Number(page), Number(pageSize), includeReplies === 'true');
+  }
 }
