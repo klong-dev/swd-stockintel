@@ -76,6 +76,56 @@ export class UserController {
     return this.userService.findAll(Number(page), Number(pageSize));
   }
 
+  @ApiOperation({ summary: 'Get current user profile' })
+  @ApiResponse({
+    status: 200,
+    description: 'Current user profile fetched successfully',
+    schema: {
+      example: {
+        error: false,
+        data: {
+          userId: 'user123',
+          email: 'user@example.com',
+          fullName: 'John Doe',
+          avatarUrl: 'https://example.com/avatar.jpg',
+          status: 1,
+          isExpert: false,
+          posts: [],
+          comments: [],
+          notifications: []
+        },
+        message: 'User profile fetched successfully',
+      },
+    },
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - Invalid or missing token.',
+    schema: {
+      example: {
+        error: true,
+        data: null,
+        message: 'Unauthorized',
+      },
+    },
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'User not found.',
+    schema: {
+      example: {
+        error: true,
+        data: null,
+        message: 'User not found',
+      },
+    },
+  })
+  @UseGuards(JwtAuthGuard)
+  @Get('me')
+  getProfile(@Req() req) {
+    return this.userService.getProfile(req.user);
+  }
+
   @ApiOperation({ summary: 'Get user by ID' })
   @ApiParam({ name: 'id', type: Number })
   @ApiResponse({
@@ -247,5 +297,51 @@ export class UserController {
   @Patch(':id/restore')
   restore(@Param('id') id: string, @Req() req) {
     return this.userService.restore(id, req.user);
+  }
+
+  @ApiOperation({ summary: 'Get user favorite posts' })
+  @ApiResponse({
+    status: 200,
+    description: 'Favorite posts fetched successfully',
+    schema: {
+      example: {
+        error: false,
+        data: {
+          items: [
+            {
+              postId: 1,
+              title: 'Sample Post',
+              content: 'Content...',
+              expert: { userId: 'user123', fullName: 'John Doe' },
+              stock: { stockId: 1, symbol: 'AAPL' }
+            }
+          ],
+          total: 1,
+          page: 1,
+          pageSize: 10
+        },
+        message: 'Favorite posts fetched successfully',
+      },
+    },
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized.',
+    schema: {
+      example: {
+        error: true,
+        data: null,
+        message: 'Unauthorized',
+      },
+    },
+  })
+  @UseGuards(JwtAuthGuard)
+  @Get('me/favorites')
+  getFavoritePosts(
+    @Req() req,
+    @Query('page') page: string = '1',
+    @Query('pageSize') pageSize: string = '10'
+  ) {
+    return this.userService.getFavoritePosts(req.user, Number(page), Number(pageSize));
   }
 }

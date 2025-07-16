@@ -11,8 +11,8 @@ export class Comment {
     @Column({ name: 'post_id', type: 'int', nullable: true })
     postId: number | null;
 
-    @Column({ name: 'user_id', type: 'int', nullable: true })
-    userId: number | null;
+    @Column({ name: 'user_id', type: 'varchar', length: 50, nullable: true })
+    userId: string | null;
 
     @Column({ name: 'parent_comment_id', type: 'int', nullable: true })
     parentCommentId: number | null;

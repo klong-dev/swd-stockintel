@@ -4,6 +4,9 @@ import { Repository } from 'typeorm';
 import { Post } from './entities/post.entity';
 import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
+import { VotePostDto } from './dto/vote-post.dto';
+import { UserFavorite } from '../user/entities/user-favorite.entity';
+import { UserVote } from '../user/entities/user-vote.entity';
 import { RedisService } from 'src/modules/redis/redis.service';
 import { paginate } from '../../utils/pagination';
 import { CloudinaryService } from '../cloudinary/cloudinary.service';
@@ -14,6 +17,10 @@ export class PostService {
     constructor(
         @InjectRepository(Post)
         private readonly postRepository: Repository<Post>,
+        @InjectRepository(UserFavorite)
+        private readonly userFavoriteRepository: Repository<UserFavorite>,
+        @InjectRepository(UserVote)
+        private readonly userVoteRepository: Repository<UserVote>,
         private readonly redisService: RedisService,
         private readonly cloudinaryService: CloudinaryService,
     ) {
@@ -245,6 +252,237 @@ export class PostService {
                 error: true,
                 data: null,
                 message: e.message || 'Failed to restore post',
+            };
+        }
+    }
+
+    async favoritePost(postId: number, user: any) {
+        try {
+            // Check if post exists
+            const post = await this.postRepository.findOne({ where: { postId } });
+            if (!post) {
+                return {
+                    error: true,
+                    data: null,
+                    message: 'Post not found',
+                };
+            }
+
+            // Check if already favorited
+            const existingFavorite = await this.userFavoriteRepository.findOne({
+                where: { userId: user.userId, postId }
+            });
+
+            if (existingFavorite) {
+                return {
+                    error: true,
+                    data: null,
+                    message: 'Post already favorited',
+                };
+            }
+
+            // Create favorite
+            const favorite = this.userFavoriteRepository.create({
+                userId: user.userId,
+                postId
+            });
+            await this.userFavoriteRepository.save(favorite);
+
+            // Update favorite count
+            await this.postRepository.increment({ postId }, 'favoriteCount', 1);
+
+            // Clear cache
+            await this.removeFromCache('posts:all');
+            await this.removeFromCache(`posts:${postId}`);
+            await this.removeFromCache(`user:${user.userId}:favorites`);
+
+            return {
+                error: false,
+                data: { favorited: true },
+                message: 'Post favorited successfully',
+            };
+        } catch (e) {
+            return {
+                error: true,
+                data: null,
+                message: e.message || 'Failed to favorite post',
+            };
+        }
+    }
+
+    async unfavoritePost(postId: number, user: any) {
+        try {
+            // Check if post exists
+            const post = await this.postRepository.findOne({ where: { postId } });
+            if (!post) {
+                return {
+                    error: true,
+                    data: null,
+                    message: 'Post not found',
+                };
+            }
+
+            // Check if favorited
+            const existingFavorite = await this.userFavoriteRepository.findOne({
+                where: { userId: user.userId, postId }
+            });
+
+            if (!existingFavorite) {
+                return {
+                    error: true,
+                    data: null,
+                    message: 'Post not favorited',
+                };
+            }
+
+            // Remove favorite
+            await this.userFavoriteRepository.remove(existingFavorite);
+
+            // Update favorite count
+            await this.postRepository.decrement({ postId }, 'favoriteCount', 1);
+
+            // Clear cache
+            await this.removeFromCache('posts:all');
+            await this.removeFromCache(`posts:${postId}`);
+            await this.removeFromCache(`user:${user.userId}:favorites`);
+
+            return {
+                error: false,
+                data: { favorited: false },
+                message: 'Post unfavorited successfully',
+            };
+        } catch (e) {
+            return {
+                error: true,
+                data: null,
+                message: e.message || 'Failed to unfavorite post',
+            };
+        }
+    }
+
+    async votePost(postId: number, votePostDto: VotePostDto, user: any) {
+        try {
+            // Check if post exists
+            const post = await this.postRepository.findOne({ where: { postId } });
+            if (!post) {
+                return {
+                    error: true,
+                    data: null,
+                    message: 'Post not found',
+                };
+            }
+
+            // Check existing vote
+            const existingVote = await this.userVoteRepository.findOne({
+                where: { userId: user.userId, postId }
+            });
+
+            if (existingVote) {
+                // If same vote type, remove the vote
+                if (existingVote.voteType === votePostDto.voteType) {
+                    await this.userVoteRepository.remove(existingVote);
+
+                    // Update count
+                    if (votePostDto.voteType === 'UPVOTE') {
+                        await this.postRepository.decrement({ postId }, 'upvoteCount', 1);
+                    } else {
+                        await this.postRepository.decrement({ postId }, 'downvoteCount', 1);
+                    }
+
+                    await this.removeFromCache('posts:all');
+                    await this.removeFromCache(`posts:${postId}`);
+
+                    return {
+                        error: false,
+                        data: { voteType: null, removed: true },
+                        message: 'Vote removed successfully',
+                    };
+                } else {
+                    // Change vote type
+                    const oldVoteType = existingVote.voteType;
+                    existingVote.voteType = votePostDto.voteType;
+                    existingVote.updatedAt = new Date();
+                    await this.userVoteRepository.save(existingVote);
+
+                    // Update counts
+                    if (oldVoteType === 'UPVOTE') {
+                        await this.postRepository.decrement({ postId }, 'upvoteCount', 1);
+                        await this.postRepository.increment({ postId }, 'downvoteCount', 1);
+                    } else {
+                        await this.postRepository.decrement({ postId }, 'downvoteCount', 1);
+                        await this.postRepository.increment({ postId }, 'upvoteCount', 1);
+                    }
+
+                    await this.removeFromCache('posts:all');
+                    await this.removeFromCache(`posts:${postId}`);
+
+                    return {
+                        error: false,
+                        data: { voteType: votePostDto.voteType, changed: true },
+                        message: 'Vote updated successfully',
+                    };
+                }
+            } else {
+                // Create new vote
+                const vote = this.userVoteRepository.create({
+                    userId: user.userId,
+                    postId,
+                    voteType: votePostDto.voteType
+                });
+                await this.userVoteRepository.save(vote);
+
+                // Update count
+                if (votePostDto.voteType === 'UPVOTE') {
+                    await this.postRepository.increment({ postId }, 'upvoteCount', 1);
+                } else {
+                    await this.postRepository.increment({ postId }, 'downvoteCount', 1);
+                }
+
+                await this.removeFromCache('posts:all');
+                await this.removeFromCache(`posts:${postId}`);
+
+                return {
+                    error: false,
+                    data: { voteType: votePostDto.voteType, created: true },
+                    message: 'Vote added successfully',
+                };
+            }
+        } catch (e) {
+            return {
+                error: true,
+                data: null,
+                message: e.message || 'Failed to vote on post',
+            };
+        }
+    }
+
+    async getUserFavoritePosts(userId: string, page: number = 1, pageSize: number = 10) {
+        try {
+            const cacheKey = `user:${userId}:favorites`;
+            const cached = await this.getFromCache<any>(cacheKey);
+            if (cached) return { error: false, data: cached, message: 'Favorite posts fetched from cache' };
+
+            const favorites = await this.userFavoriteRepository.find({
+                where: { userId },
+                relations: ['post', 'post.expert', 'post.stock'],
+                order: { createdAt: 'DESC' }
+            });
+
+            const posts = favorites.map(fav => fav.post);
+            const paginated = paginate(posts, page, pageSize);
+
+            if (paginated) await this.setToCache(cacheKey, paginated);
+
+            return {
+                error: false,
+                data: paginated,
+                message: 'Favorite posts fetched successfully',
+            };
+        } catch (e) {
+            return {
+                error: true,
+                data: null,
+                message: e.message || 'Failed to fetch favorite posts',
             };
         }
     }
