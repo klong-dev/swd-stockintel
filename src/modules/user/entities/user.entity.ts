@@ -3,6 +3,8 @@ import { Post } from '../../post/entities/post.entity';
 import { Comment } from '../../comment/entities/comment.entity';
 import { Notification } from '../../notification/entities/notification.entity';
 import { Report } from '../../report/entities/report.entity';
+import { UserFavorite } from './user-favorite.entity';
+import { UserVote } from './user-vote.entity';
 
 @Entity('user')
 export class User {
@@ -53,4 +55,10 @@ export class User {
 
     @OneToMany(() => Report, report => report.user)
     reports: Report[];
+
+    @OneToMany(() => UserFavorite, favorite => favorite.user)
+    favorites: UserFavorite[];
+
+    @OneToMany(() => UserVote, vote => vote.user)
+    votes: UserVote[];
 }

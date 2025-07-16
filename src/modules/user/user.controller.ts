@@ -298,4 +298,50 @@ export class UserController {
   restore(@Param('id') id: string, @Req() req) {
     return this.userService.restore(id, req.user);
   }
+
+  @ApiOperation({ summary: 'Get user favorite posts' })
+  @ApiResponse({
+    status: 200,
+    description: 'Favorite posts fetched successfully',
+    schema: {
+      example: {
+        error: false,
+        data: {
+          items: [
+            {
+              postId: 1,
+              title: 'Sample Post',
+              content: 'Content...',
+              expert: { userId: 'user123', fullName: 'John Doe' },
+              stock: { stockId: 1, symbol: 'AAPL' }
+            }
+          ],
+          total: 1,
+          page: 1,
+          pageSize: 10
+        },
+        message: 'Favorite posts fetched successfully',
+      },
+    },
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized.',
+    schema: {
+      example: {
+        error: true,
+        data: null,
+        message: 'Unauthorized',
+      },
+    },
+  })
+  @UseGuards(JwtAuthGuard)
+  @Get('me/favorites')
+  getFavoritePosts(
+    @Req() req,
+    @Query('page') page: string = '1',
+    @Query('pageSize') pageSize: string = '10'
+  ) {
+    return this.userService.getFavoritePosts(req.user, Number(page), Number(pageSize));
+  }
 }

@@ -7,11 +7,6 @@ export class CreateCommentDto {
     @IsInt()
     postId?: number;
 
-    @ApiPropertyOptional({ description: 'ID of the user making the comment' })
-    @IsOptional()
-    @IsInt()
-    userId?: number;
-
     @ApiPropertyOptional({ description: 'ID of the parent comment if this is a reply' })
     @IsOptional()
     @IsInt()

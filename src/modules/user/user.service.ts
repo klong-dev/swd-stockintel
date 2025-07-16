@@ -1,7 +1,8 @@
-import { Injectable, NotFoundException, ForbiddenException, UnauthorizedException, ConflictException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException, UnauthorizedException, ConflictException, Inject, forwardRef } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from './entities/user.entity';
+import { UserFavorite } from './entities/user-favorite.entity';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { JwtService } from '@nestjs/jwt';
@@ -14,6 +15,8 @@ export class UserService {
     constructor(
         @InjectRepository(User)
         private readonly userRepository: Repository<User>,
+        @InjectRepository(UserFavorite)
+        private readonly userFavoriteRepository: Repository<UserFavorite>,
         private readonly jwtService: JwtService,
         private readonly cloudinaryService: CloudinaryService,
     ) { }
@@ -181,12 +184,25 @@ export class UserService {
                 };
             }
 
+            // Get favorite posts
+            const favorites = await this.userFavoriteRepository.find({
+                where: { userId: user.userId },
+                relations: ['post', 'post.expert', 'post.stock'],
+                order: { createdAt: 'DESC' },
+                take: 10 // Limit to 10 recent favorites
+            });
+
+            const favoritePosts = favorites.map(fav => fav.post);
+
             // Remove sensitive information
             const { passwordHash, refreshToken, ...safeUserData } = userData;
 
             return {
                 error: false,
-                data: safeUserData,
+                data: {
+                    ...safeUserData,
+                    favoritePosts
+                },
                 message: 'User profile fetched successfully',
             };
         } catch (e) {
@@ -194,6 +210,31 @@ export class UserService {
                 error: true,
                 data: null,
                 message: e.message || 'Failed to fetch user profile',
+            };
+        }
+    }
+
+    async getFavoritePosts(user: any, page: number = 1, pageSize: number = 10) {
+        try {
+            const favorites = await this.userFavoriteRepository.find({
+                where: { userId: user.userId },
+                relations: ['post', 'post.expert', 'post.stock'],
+                order: { createdAt: 'DESC' }
+            });
+
+            const posts = favorites.map(fav => fav.post);
+            const paginated = paginate(posts, page, pageSize);
+
+            return {
+                error: false,
+                data: paginated,
+                message: 'Favorite posts fetched successfully',
+            };
+        } catch (e) {
+            return {
+                error: true,
+                data: null,
+                message: e.message || 'Failed to fetch favorite posts',
             };
         }
     }
