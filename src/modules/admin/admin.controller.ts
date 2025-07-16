@@ -212,7 +212,17 @@ export class AdminController {
 
   @ApiOperation({ summary: 'Admin: Login' })
   @ApiResponse({ status: 200, description: 'Admin login successful' })
-  @ApiResponse({ status: 401, description: 'Invalid credentials' })
+  @ApiResponse({
+    status: 401,
+    description: 'Invalid credentials or humorous password mismatch message',
+    schema: {
+      example: {
+        error: true,
+        data: null,
+        message: 'Login successfully',
+      }
+    }
+  })
   @HttpPost('login')
   async adminLogin(@Body() loginDto: AdminLoginDto) {
     return this.adminService.adminLogin(loginDto);
