@@ -62,7 +62,7 @@ export class AdminService {
 
             // Get all posts including deleted ones for admin view
             const [posts, total] = await this.postRepository.findAndCount({
-                relations: ['expert', 'stock', 'tag', 'comments', 'reports'],
+                relations: ['expert', 'stock', 'comments', 'reports'],
                 order: { createdAt: 'DESC' },
                 skip: (page - 1) * pageSize,
                 take: pageSize,
@@ -109,7 +109,7 @@ export class AdminService {
 
             const post = await this.postRepository.findOne({
                 where: { postId: id },
-                relations: ['expert', 'stock', 'tag', 'comments', 'reports'],
+                relations: ['expert', 'stock', 'comments', 'reports'],
             });
 
             if (!post) {
@@ -174,7 +174,7 @@ export class AdminService {
             await this.postRepository.update(id, updatePostDto);
             const updatedPost = await this.postRepository.findOne({
                 where: { postId: id },
-                relations: ['expert', 'stock', 'tag'],
+                relations: ['expert', 'stock'],
             });
 
             // Clear cache
@@ -267,21 +267,9 @@ export class AdminService {
 
     async getPostsByStatus(status?: string, page: number = 1, pageSize: number = 10): Promise<{ error: boolean; data: any; message: string }> {
         try {
-            const cacheKey = `admin:posts:status:${status || 'all'}:${page}:${pageSize}`;
-            const cachedData = await this.getFromCache(cacheKey);
-
-            if (cachedData) {
-                return {
-                    error: false,
-                    data: cachedData,
-                    message: 'Posts filtered by status (from cache)',
-                };
-            }
-
             let queryBuilder = this.postRepository.createQueryBuilder('post')
                 .leftJoinAndSelect('post.expert', 'expert')
                 .leftJoinAndSelect('post.stock', 'stock')
-                .leftJoinAndSelect('post.tag', 'tag')
                 .leftJoinAndSelect('post.reports', 'reports');
 
             // Apply status filters
@@ -328,8 +316,6 @@ export class AdminService {
                 },
             };
 
-            await this.setToCache(cacheKey, result, 300);
-
             return {
                 error: false,
                 data: result,
@@ -346,21 +332,9 @@ export class AdminService {
 
     async getReportedPosts(page: number = 1, pageSize: number = 10): Promise<{ error: boolean; data: any; message: string }> {
         try {
-            const cacheKey = `admin:posts:reported:${page}:${pageSize}`;
-            const cachedData = await this.getFromCache(cacheKey);
-
-            if (cachedData) {
-                return {
-                    error: false,
-                    data: cachedData,
-                    message: 'Reported posts fetched successfully (from cache)',
-                };
-            }
-
             const [posts, total] = await this.postRepository.createQueryBuilder('post')
                 .leftJoinAndSelect('post.expert', 'expert')
                 .leftJoinAndSelect('post.stock', 'stock')
-                .leftJoinAndSelect('post.tag', 'tag')
                 .leftJoinAndSelect('post.reports', 'reports')
                 .leftJoinAndSelect('reports.user', 'reportUser')
                 .where('reports.reportId IS NOT NULL')
@@ -379,8 +353,6 @@ export class AdminService {
                 },
             };
 
-            await this.setToCache(cacheKey, result, 300);
-
             return {
                 error: false,
                 data: result,
@@ -397,16 +369,6 @@ export class AdminService {
 
     async getBlockedPosts(page: number = 1, pageSize: number = 10): Promise<{ error: boolean; data: any; message: string }> {
         try {
-            const cacheKey = `admin:posts:blocked:${page}:${pageSize}`;
-            const cachedData = await this.getFromCache(cacheKey);
-
-            if (cachedData) {
-                return {
-                    error: false,
-                    data: cachedData,
-                    message: 'Blocked posts fetched successfully (from cache)',
-                };
-            }
 
             const [posts, total] = await this.postRepository.findAndCount({
                 where: { status: 'BLOCKED' },
@@ -426,8 +388,6 @@ export class AdminService {
                 },
             };
 
-            await this.setToCache(cacheKey, result, 300);
-
             return {
                 error: false,
                 data: result,
@@ -444,17 +404,6 @@ export class AdminService {
 
     async getPostsStatistics(): Promise<{ error: boolean; data: any; message: string }> {
         try {
-            const cacheKey = 'admin:posts-users:statistics';
-            const cachedData = await this.getFromCache(cacheKey);
-
-            if (cachedData) {
-                return {
-                    error: false,
-                    data: cachedData,
-                    message: 'Posts and users statistics fetched successfully (from cache)',
-                };
-            }
-
             const now = new Date();
             const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
             const thisWeekStart = new Date(today);
@@ -540,8 +489,6 @@ export class AdminService {
                 generatedAt: new Date(),
             };
 
-            await this.setToCache(cacheKey, statistics, 600); // Cache for 10 minutes
-
             return {
                 error: false,
                 data: statistics,
@@ -610,7 +557,6 @@ export class AdminService {
             let queryBuilder = this.postRepository.createQueryBuilder('post')
                 .leftJoinAndSelect('post.expert', 'expert')
                 .leftJoinAndSelect('post.stock', 'stock')
-                .leftJoinAndSelect('post.tag', 'tag')
                 .leftJoinAndSelect('post.reports', 'reports')
                 .leftJoinAndSelect('post.comments', 'comments');
 
@@ -840,17 +786,6 @@ export class AdminService {
 
     async getDeletedUsers(page: number = 1, pageSize: number = 10): Promise<{ error: boolean; data: any; message: string }> {
         try {
-            const cacheKey = `admin:users:deleted:${page}:${pageSize}`;
-            const cachedData = await this.getFromCache(cacheKey);
-
-            if (cachedData) {
-                return {
-                    error: false,
-                    data: cachedData,
-                    message: 'Deleted users fetched successfully (from cache)',
-                };
-            }
-
             const [users, total] = await this.userRepository.findAndCount({
                 where: { status: 0 },
                 order: { createdAt: 'DESC' },
@@ -867,8 +802,6 @@ export class AdminService {
                     totalPages: Math.ceil(total / pageSize),
                 },
             };
-
-            await this.setToCache(cacheKey, result, 300);
 
             return {
                 error: false,
