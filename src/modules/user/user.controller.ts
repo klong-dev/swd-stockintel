@@ -76,6 +76,56 @@ export class UserController {
     return this.userService.findAll(Number(page), Number(pageSize));
   }
 
+  @ApiOperation({ summary: 'Get current user profile' })
+  @ApiResponse({
+    status: 200,
+    description: 'Current user profile fetched successfully',
+    schema: {
+      example: {
+        error: false,
+        data: {
+          userId: 'user123',
+          email: 'user@example.com',
+          fullName: 'John Doe',
+          avatarUrl: 'https://example.com/avatar.jpg',
+          status: 1,
+          isExpert: false,
+          posts: [],
+          comments: [],
+          notifications: []
+        },
+        message: 'User profile fetched successfully',
+      },
+    },
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - Invalid or missing token.',
+    schema: {
+      example: {
+        error: true,
+        data: null,
+        message: 'Unauthorized',
+      },
+    },
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'User not found.',
+    schema: {
+      example: {
+        error: true,
+        data: null,
+        message: 'User not found',
+      },
+    },
+  })
+  @UseGuards(JwtAuthGuard)
+  @Get('me')
+  getProfile(@Req() req) {
+    return this.userService.getProfile(req.user);
+  }
+
   @ApiOperation({ summary: 'Get user by ID' })
   @ApiParam({ name: 'id', type: Number })
   @ApiResponse({

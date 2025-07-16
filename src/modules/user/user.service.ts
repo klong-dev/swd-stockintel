@@ -165,4 +165,36 @@ export class UserService {
             };
         }
     }
+
+    async getProfile(user: any) {
+        try {
+            const userData = await this.userRepository.findOne({
+                where: { userId: user.userId },
+                relations: ['posts', 'comments', 'notifications']
+            });
+
+            if (!userData) {
+                return {
+                    error: true,
+                    data: null,
+                    message: 'User not found',
+                };
+            }
+
+            // Remove sensitive information
+            const { passwordHash, refreshToken, ...safeUserData } = userData;
+
+            return {
+                error: false,
+                data: safeUserData,
+                message: 'User profile fetched successfully',
+            };
+        } catch (e) {
+            return {
+                error: true,
+                data: null,
+                message: e.message || 'Failed to fetch user profile',
+            };
+        }
+    }
 }
