@@ -2,6 +2,7 @@ import { Controller, Get, Post as HttpPost, Body, Patch, Param, Delete, UseGuard
 import { PostService } from './post.service';
 import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
+import { VotePostDto } from './dto/vote-post.dto';
 import { JwtAuthGuard } from 'src/guards/jwt-auth.guard';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiParam, ApiBody, ApiResponse, ApiConsumes } from '@nestjs/swagger';
 import { FileInterceptor } from '@nestjs/platform-express';
@@ -252,5 +253,129 @@ export class PostController {
   @Patch(':id/restore')
   restore(@Param('id') id: string, @Req() req) {
     return this.postService.restore(+id, req.user);
+  }
+
+  @ApiOperation({ summary: 'Favorite a post' })
+  @ApiParam({ name: 'id', type: Number, description: 'Post ID' })
+  @ApiResponse({
+    status: 200,
+    description: 'Post favorited successfully',
+    schema: {
+      example: {
+        error: false,
+        data: { favorited: true },
+        message: 'Post favorited successfully',
+      },
+    },
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Post not found.',
+    schema: {
+      example: {
+        error: true,
+        data: null,
+        message: 'Post not found',
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Post already favorited.',
+    schema: {
+      example: {
+        error: true,
+        data: null,
+        message: 'Post already favorited',
+      },
+    },
+  })
+  @UseGuards(JwtAuthGuard)
+  @HttpPost(':id/favorite')
+  favoritePost(@Param('id') id: string, @Req() req) {
+    return this.postService.favoritePost(+id, req.user);
+  }
+
+  @ApiOperation({ summary: 'Unfavorite a post' })
+  @ApiParam({ name: 'id', type: Number, description: 'Post ID' })
+  @ApiResponse({
+    status: 200,
+    description: 'Post unfavorited successfully',
+    schema: {
+      example: {
+        error: false,
+        data: { favorited: false },
+        message: 'Post unfavorited successfully',
+      },
+    },
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Post not found.',
+    schema: {
+      example: {
+        error: true,
+        data: null,
+        message: 'Post not found',
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Post not favorited.',
+    schema: {
+      example: {
+        error: true,
+        data: null,
+        message: 'Post not favorited',
+      },
+    },
+  })
+  @UseGuards(JwtAuthGuard)
+  @Delete(':id/favorite')
+  unfavoritePost(@Param('id') id: string, @Req() req) {
+    return this.postService.unfavoritePost(+id, req.user);
+  }
+
+  @ApiOperation({ summary: 'Vote on a post (upvote/downvote)' })
+  @ApiParam({ name: 'id', type: Number, description: 'Post ID' })
+  @ApiBody({ type: VotePostDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Vote submitted successfully',
+    schema: {
+      example: {
+        error: false,
+        data: { voteType: 'UPVOTE', created: true },
+        message: 'Vote added successfully',
+      },
+    },
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Post not found.',
+    schema: {
+      example: {
+        error: true,
+        data: null,
+        message: 'Post not found',
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Failed to vote on post.',
+    schema: {
+      example: {
+        error: true,
+        data: null,
+        message: 'Failed to vote on post',
+      },
+    },
+  })
+  @UseGuards(JwtAuthGuard)
+  @HttpPost(':id/vote')
+  votePost(@Param('id') id: string, @Body() votePostDto: VotePostDto, @Req() req) {
+    return this.postService.votePost(+id, votePostDto, req.user);
   }
 }
