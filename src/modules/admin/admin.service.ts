@@ -503,6 +503,135 @@ export class AdminService {
         }
     }
 
+    async getUsersStatistics(): Promise<{ error: boolean; data: any; message: string }> {
+        try {
+            const cacheKey = 'admin:users:statistics';
+            const cached = await this.getFromCache(cacheKey);
+            if (cached) {
+                return {
+                    error: false,
+                    data: cached,
+                    message: 'Users statistics fetched successfully (from cache)',
+                };
+            }
+
+            const now = new Date();
+            const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            const thisWeekStart = new Date(today);
+            thisWeekStart.setDate(today.getDate() - today.getDay());
+            const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+            const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+            const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0);
+
+            const [
+                totalUsers,
+                totalActiveUsers,
+                totalInactiveUsers,
+                totalExperts,
+                totalRegularUsers,
+                usersRegisteredToday,
+                usersRegisteredThisWeek,
+                usersRegisteredThisMonth,
+                usersRegisteredLastMonth,
+                usersByProvider,
+                expertUsers,
+                recentUsers,
+            ] = await Promise.all([
+                // Basic counts
+                this.userRepository.count(),
+                this.userRepository.count({ where: { status: 1 } }),
+                this.userRepository.count({ where: { status: 0 } }),
+                this.userRepository.count({ where: { isExpert: true } }),
+                this.userRepository.count({ where: { isExpert: false } }),
+
+                // Time-based registrations
+                this.userRepository.createQueryBuilder('user')
+                    .where('user.createdAt >= :today', { today })
+                    .getCount(),
+                this.userRepository.createQueryBuilder('user')
+                    .where('user.createdAt >= :thisWeekStart', { thisWeekStart })
+                    .getCount(),
+                this.userRepository.createQueryBuilder('user')
+                    .where('user.createdAt >= :thisMonthStart', { thisMonthStart })
+                    .getCount(),
+                this.userRepository.createQueryBuilder('user')
+                    .where('user.createdAt >= :lastMonthStart AND user.createdAt <= :lastMonthEnd',
+                        { lastMonthStart, lastMonthEnd })
+                    .getCount(),
+
+                // Users by provider
+                this.userRepository.createQueryBuilder('user')
+                    .select('user.provider, COUNT(*) as count')
+                    .groupBy('user.provider')
+                    .getRawMany(),
+
+                // Expert users with details
+                this.userRepository.createQueryBuilder('user')
+                    .select(['user.userId', 'user.fullName', 'user.email', 'user.avatarUrl', 'user.createdAt'])
+                    .where('user.isExpert = :isExpert', { isExpert: true })
+                    .orderBy('user.createdAt', 'DESC')
+                    .limit(10)
+                    .getMany(),
+
+                // Recent users
+                this.userRepository.createQueryBuilder('user')
+                    .select(['user.userId', 'user.fullName', 'user.email', 'user.avatarUrl', 'user.provider', 'user.createdAt', 'user.status'])
+                    .orderBy('user.createdAt', 'DESC')
+                    .limit(10)
+                    .getMany(),
+            ]);
+
+            // Calculate growth rate
+            const growthRate = usersRegisteredLastMonth > 0
+                ? ((usersRegisteredThisMonth - usersRegisteredLastMonth) / usersRegisteredLastMonth * 100).toFixed(2)
+                : usersRegisteredThisMonth > 0 ? '100.00' : '0.00';
+
+            // Format provider statistics
+            const providerStats = usersByProvider.reduce((acc, item) => {
+                acc[item.provider || 'unknown'] = parseInt(item.count);
+                return acc;
+            }, {});
+
+            const statistics = {
+                overview: {
+                    totalUsers,
+                    totalActiveUsers,
+                    totalInactiveUsers,
+                    totalExperts,
+                    totalRegularUsers,
+                    activeUserPercentage: totalUsers > 0 ? ((totalActiveUsers / totalUsers) * 100).toFixed(2) : '0.00',
+                    expertPercentage: totalUsers > 0 ? ((totalExperts / totalUsers) * 100).toFixed(2) : '0.00',
+                },
+                registrations: {
+                    today: usersRegisteredToday,
+                    thisWeek: usersRegisteredThisWeek,
+                    thisMonth: usersRegisteredThisMonth,
+                    lastMonth: usersRegisteredLastMonth,
+                    growthRate: `${growthRate}%`,
+                },
+                providers: providerStats,
+                experts: expertUsers,
+                recentUsers: recentUsers,
+                generatedAt: new Date(),
+            };
+
+            // Cache for 5 minutes
+            await this.setToCache(cacheKey, statistics, 300);
+
+            return {
+                error: false,
+                data: statistics,
+                message: 'Users statistics fetched successfully',
+            };
+        } catch (e) {
+            return {
+                error: true,
+                data: null,
+                message: e.message || 'Failed to fetch users statistics',
+            };
+        }
+    }
+
     async togglePostStatus(id: number): Promise<{ error: boolean; data: any; message: string }> {
         try {
             const post = await this.postRepository.findOne({ where: { postId: id } });
@@ -835,6 +964,7 @@ export class AdminService {
 
             // Clear cache
             await this.removeFromCache('admin:posts-users:statistics');
+            await this.removeFromCache('admin:users:statistics');
 
             return {
                 error: false,
@@ -868,6 +998,7 @@ export class AdminService {
 
             // Clear cache
             await this.removeFromCache('admin:posts-users:statistics');
+            await this.removeFromCache('admin:users:statistics');
 
             return {
                 error: false,

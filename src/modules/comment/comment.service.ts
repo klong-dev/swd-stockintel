@@ -42,6 +42,11 @@ export class CommentService {
             const saved = await this.commentRepository.save(comment);
             await this.removeFromCache(`${this.cachePrefix}:all`);
             await this.removeFromCache(`${this.cachePrefix}:${saved.commentId}`);
+
+            // Clear post-specific comment cache
+            if (saved.postId) {
+                await this.removeFromCache(`${this.cachePrefix}:post:${saved.postId}:*`);
+            }
             return {
                 error: false,
                 data: saved,
@@ -86,6 +91,11 @@ export class CommentService {
             await this.removeFromCache(`${this.cachePrefix}:all`);
             await this.removeFromCache(`${this.cachePrefix}:${saved.commentId}`);
             await this.removeFromCache(`${this.cachePrefix}:replies:${parentCommentId}`);
+
+            // Clear post-specific comment cache since replies are included
+            if (saved.postId) {
+                await this.removeFromCache(`${this.cachePrefix}:post:${saved.postId}:*`);
+            }
 
             return {
                 error: false,
@@ -335,6 +345,73 @@ export class CommentService {
                 error: true,
                 data: null,
                 message: e.message || 'Failed to delete comment',
+            };
+        }
+    }
+
+    async getCommentsByPostId(postId: number, page: number = 1, pageSize: number = 10, includeReplies: boolean = true) {
+        try {
+            const cacheKey = `${this.cachePrefix}:post:${postId}:page:${page}:size:${pageSize}:replies:${includeReplies}`;
+            const cached = await this.getFromCache(cacheKey);
+            if (cached) {
+                return {
+                    error: false,
+                    data: cached,
+                    message: 'Comments for post fetched successfully (from cache)',
+                };
+            }
+
+            // Build query for comments belonging to the post (no parent comment = top-level comments)
+            const queryBuilder = this.commentRepository.createQueryBuilder('comment')
+                .leftJoinAndSelect('comment.user', 'user')
+                .where('comment.postId = :postId', { postId })
+                .andWhere('comment.parentCommentId IS NULL') // Only top-level comments
+                .orderBy('comment.createdAt', 'DESC');
+
+            // If including replies, also fetch them
+            if (includeReplies) {
+                queryBuilder.leftJoinAndSelect('comment.children', 'replies')
+                    .leftJoinAndSelect('replies.user', 'replyUser')
+                    .addOrderBy('replies.createdAt', 'ASC'); // Replies ordered chronologically
+            }
+
+            // Get total count for pagination
+            const totalQuery = this.commentRepository.createQueryBuilder('comment')
+                .where('comment.postId = :postId', { postId })
+                .andWhere('comment.parentCommentId IS NULL');
+
+            const total = await totalQuery.getCount();
+
+            // Apply pagination
+            const comments = await queryBuilder
+                .skip((page - 1) * pageSize)
+                .take(pageSize)
+                .getMany();
+
+            const totalPages = Math.ceil(total / pageSize);
+            const result = {
+                data: comments,
+                pagination: {
+                    page,
+                    pageSize,
+                    total,
+                    totalPages,
+                },
+            };
+
+            // Cache for 5 minutes
+            await this.setToCache(cacheKey, result, 300);
+
+            return {
+                error: false,
+                data: result,
+                message: 'Comments for post fetched successfully',
+            };
+        } catch (e) {
+            return {
+                error: true,
+                data: null,
+                message: e.message || 'Failed to fetch comments for post',
             };
         }
     }
