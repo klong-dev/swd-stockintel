@@ -4,6 +4,7 @@ import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
 import { VotePostDto } from './dto/vote-post.dto';
 import { JwtAuthGuard } from 'src/guards/jwt-auth.guard';
+import { OptionalJwtAuthGuard } from 'src/guards/optional-jwt-auth.guard';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiParam, ApiBody, ApiResponse, ApiConsumes } from '@nestjs/swagger';
 import { FileInterceptor } from '@nestjs/platform-express';
 
@@ -45,20 +46,35 @@ export class PostController {
     return this.postService.create(createPostDto, req.user, sourceBuffer);
   }
 
-  @ApiOperation({ summary: 'Get all posts' })
+  @ApiOperation({ summary: 'Get all posts with user interaction status' })
   @ApiResponse({
     status: 200,
-    description: 'All posts fetched successfully',
+    description: 'All posts fetched successfully with user vote and favorite status',
     schema: {
       example: {
         error: false,
         data: {
-          items: [
-            { postId: 1, title: 'Post Title', content: 'Post content' }
+          posts: [
+            {
+              postId: 1,
+              title: 'Post Title',
+              content: 'Post content',
+              upvoteCount: 10,
+              downvoteCount: 2,
+              favoriteCount: 5,
+              userVoteType: 'UPVOTE',
+              userHasVoted: true,
+              userHasFavorited: false,
+              userVoteCreatedAt: '2025-07-17T10:00:00Z',
+              userFavoriteCreatedAt: null
+            }
           ],
-          total: 1,
-          page: 1,
-          pageSize: 10
+          pagination: {
+            page: 1,
+            pageSize: 10,
+            total: 1,
+            totalPages: 1
+          }
         },
         message: 'All posts fetched successfully',
       },
@@ -76,8 +92,10 @@ export class PostController {
     },
   })
   @Get()
-  findAll(@Query('page') page: string = '1', @Query('pageSize') pageSize: string = '10') {
-    return this.postService.findAll(Number(page), Number(pageSize));
+  @UseGuards(OptionalJwtAuthGuard)
+  findAll(@Query('page') page: string = '1', @Query('pageSize') pageSize: string = '10', @Req() req) {
+    const userId = req.user?.userId; // Extract userId from JWT token if user is authenticated
+    return this.postService.findAll(Number(page), Number(pageSize), userId);
   }
 
   @ApiOperation({ summary: 'Get top viewed posts' })
@@ -110,15 +128,27 @@ export class PostController {
     return this.postService.findTopViewed(Number(size));
   }
 
-  @ApiOperation({ summary: 'Get a post by ID' })
+  @ApiOperation({ summary: 'Get a post by ID with user interaction status' })
   @ApiParam({ name: 'id', type: Number })
   @ApiResponse({
     status: 200,
-    description: 'Post fetched successfully',
+    description: 'Post fetched successfully with user vote and favorite status',
     schema: {
       example: {
         error: false,
-        data: { postId: 1, title: 'Post Title', content: 'Post content' },
+        data: {
+          postId: 1,
+          title: 'Post Title',
+          content: 'Post content',
+          upvoteCount: 10,
+          downvoteCount: 2,
+          favoriteCount: 5,
+          userVoteType: 'UPVOTE', // 'UPVOTE', 'DOWNVOTE', or null
+          userHasVoted: true,
+          userHasFavorited: false,
+          userVoteCreatedAt: '2025-07-17T10:00:00Z',
+          userFavoriteCreatedAt: null
+        },
         message: 'Post fetched successfully',
       },
     },
@@ -135,8 +165,10 @@ export class PostController {
     },
   })
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.postService.findOne(+id);
+  @UseGuards(OptionalJwtAuthGuard)
+  findOne(@Param('id') id: string, @Req() req) {
+    const userId = req.user?.userId; // Extract userId from JWT token if user is authenticated
+    return this.postService.findOne(+id, userId);
   }
 
   @ApiOperation({ summary: 'Update a post by ID with optional image upload' })
@@ -377,5 +409,39 @@ export class PostController {
   @HttpPost(':id/vote')
   votePost(@Param('id') id: string, @Body() votePostDto: VotePostDto, @Req() req) {
     return this.postService.votePost(+id, votePostDto, req.user);
+  }
+
+  @ApiOperation({ summary: 'Check user vote status on a specific post' })
+  @ApiParam({ name: 'id', type: Number, description: 'Post ID' })
+  @ApiResponse({
+    status: 200,
+    description: 'User vote status retrieved successfully',
+    schema: {
+      example: {
+        error: false,
+        data: {
+          hasVoted: true,
+          voteType: 'UPVOTE', // 'UPVOTE', 'DOWNVOTE', or null
+          votedAt: '2025-07-17T10:00:00Z'
+        },
+        message: 'User vote status retrieved successfully',
+      },
+    },
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Post not found.',
+    schema: {
+      example: {
+        error: true,
+        data: null,
+        message: 'Post not found',
+      },
+    },
+  })
+  @UseGuards(JwtAuthGuard)
+  @Get(':id/vote-status')
+  getUserVoteStatus(@Param('id') id: string, @Req() req) {
+    return this.postService.getUserVoteStatusForPost(+id, req.user.userId);
   }
 }
