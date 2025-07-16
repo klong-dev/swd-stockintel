@@ -118,15 +118,7 @@ export class PostService {
                 });
             }
 
-            const result = {
-                posts: postsWithUserStatus,
-                pagination: {
-                    page,
-                    pageSize,
-                    total,
-                    totalPages: Math.ceil(total / pageSize),
-                },
-            };
+            const result = paginate(postsWithUserStatus, page, pageSize);
 
             return {
                 error: false,
