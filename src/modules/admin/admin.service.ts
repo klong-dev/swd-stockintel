@@ -885,22 +885,14 @@ export class AdminService {
 
     async getAllUsers(page: number = 1, pageSize: number = 10): Promise<{ error: boolean; data: any; message: string }> {
         try {
-            const cacheKey = `admin:users:all:${page}:${pageSize}`;
-            const cachedData = await this.getFromCache(cacheKey);
-
-            if (cachedData) {
-                return {
-                    error: false,
-                    data: cachedData,
-                    message: 'All users fetched successfully (from cache)',
-                };
-            }
-
             // Get all users including deleted ones for admin view
             const [users, total] = await this.userRepository.findAndCount({
                 order: { createdAt: 'DESC' },
                 skip: (page - 1) * pageSize,
                 take: pageSize,
+                where: {
+                    status: 1,
+                },
             });
 
             const result = {
@@ -912,8 +904,6 @@ export class AdminService {
                     totalPages: Math.ceil(total / pageSize),
                 },
             };
-
-            await this.setToCache(cacheKey, result, 300); // Cache for 5 minutes
 
             return {
                 error: false,
