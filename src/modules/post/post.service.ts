@@ -10,6 +10,7 @@ import { UserVote } from '../user/entities/user-vote.entity';
 import { RedisService } from 'src/modules/redis/redis.service';
 import { paginate } from '../../utils/pagination';
 import { CloudinaryService } from '../cloudinary/cloudinary.service';
+import { log } from 'console';
 
 @Injectable()
 export class PostService {
@@ -68,17 +69,68 @@ export class PostService {
         }
     }
 
-    async findAll(page: number = 1, pageSize: number = 10): Promise<{ error: boolean; data: any; message: string }> {
+    async findAll(page: number = 1, pageSize: number = 10, userId?: string): Promise<{ error: boolean; data: any; message: string }> {
         try {
-            // Only get active posts (not deleted)
-            const data = await this.postRepository.find({
+            // Get active posts with pagination
+            const [posts, total] = await this.postRepository.findAndCount({
                 where: { status: 'ACTIVE' },
-                relations: ['expert']
+                relations: ['expert', 'stock'],
+                order: { createdAt: 'DESC' },
+                skip: (page - 1) * pageSize,
+                take: pageSize,
             });
-            const paginated = paginate(data, page, pageSize);
+
+            let postsWithUserStatus = posts;
+
+            // If user is authenticated, get their vote and favorite status for all posts
+            if (userId && posts.length > 0) {
+                const postIds = posts.map(post => post.postId);
+
+                // Get user votes for these posts
+                const userVotes = await this.userVoteRepository.createQueryBuilder('vote')
+                    .where('vote.userId = :userId', { userId })
+                    .andWhere('vote.postId IN (:...postIds)', { postIds })
+                    .getMany();
+
+                // Get user favorites for these posts
+                const userFavorites = await this.userFavoriteRepository.createQueryBuilder('favorite')
+                    .where('favorite.userId = :userId', { userId })
+                    .andWhere('favorite.postId IN (:...postIds)', { postIds })
+                    .getMany();
+
+                // Create maps for quick lookup
+                const voteMap = new Map(userVotes.map(vote => [vote.postId, vote]));
+                const favoriteMap = new Map(userFavorites.map(fav => [fav.postId, fav]));
+
+                // Add user interaction status to each post
+                postsWithUserStatus = posts.map(post => {
+                    const userVote = voteMap.get(post.postId);
+                    const userFavorite = favoriteMap.get(post.postId);
+
+                    return {
+                        ...post,
+                        userVoteType: userVote ? userVote.voteType : null,
+                        userHasVoted: !!userVote,
+                        userHasFavorited: !!userFavorite,
+                        userVoteCreatedAt: userVote ? userVote.createdAt : null,
+                        userFavoriteCreatedAt: userFavorite ? userFavorite.createdAt : null,
+                    };
+                });
+            }
+
+            const result = {
+                posts: postsWithUserStatus,
+                pagination: {
+                    page,
+                    pageSize,
+                    total,
+                    totalPages: Math.ceil(total / pageSize),
+                },
+            };
+
             return {
                 error: false,
-                data: paginated,
+                data: result,
                 message: 'All posts fetched successfully',
             };
         } catch (e) {
@@ -155,17 +207,44 @@ export class PostService {
         }
     }
 
-    async findOne(id: number) {
+    async findOne(id: number, userId?: string) {
         try {
-            const cacheKey = `posts:${id}`;
-            const cached = await this.getFromCache<Post>(cacheKey);
-            if (cached) return { error: false, result: cached, message: 'Post fetched successfully (from cache)' };
-            const result = await this.postRepository.findOne({ where: { postId: id }, relations: ['expert'] });
-            if (result) await this.setToCache(cacheKey, result);
+            const result = await this.postRepository.findOne({
+                where: { postId: id },
+                relations: ['expert', 'stock']
+            });
+
             if (!result) return { error: true, data: null, message: 'Post not found' };
+
+            // If user is authenticated, check their vote and favorite status
+            let userVote = null;
+            let userFavorite = null;
+
+            if (userId) {
+                // Check if user has voted on this post
+                userVote = await this.userVoteRepository.findOne({
+                    where: { userId, postId: id }
+                });
+
+                // Check if user has favorited this post
+                userFavorite = await this.userFavoriteRepository.findOne({
+                    where: { userId, postId: id }
+                });
+            }
+
+            // Prepare the response with user interaction status
+            const responseData = {
+                ...result,
+                userVoteType: userVote ? userVote.voteType : null,
+                userHasVoted: !!userVote,
+                userHasFavorited: !!userFavorite,
+                userVoteCreatedAt: userVote ? userVote.createdAt : null,
+                userFavoriteCreatedAt: userFavorite ? userFavorite.createdAt : null,
+            };
+
             return {
                 error: false,
-                data: result,
+                data: responseData,
                 message: 'Post fetched successfully',
             };
         } catch (e) {
@@ -483,6 +562,59 @@ export class PostService {
                 error: true,
                 data: null,
                 message: e.message || 'Failed to fetch favorite posts',
+            };
+        }
+    }
+
+    /**
+     * Get user's vote status for a specific post
+     * @param postId - Post ID
+     * @param userId - User ID
+     * @returns User's vote status for the post
+     */
+    async getUserVoteStatusForPost(postId: number, userId: string): Promise<{ error: boolean; data: any; message: string }> {
+        try {
+            // Check if post exists
+            const post = await this.postRepository.findOne({
+                where: { postId }
+            });
+
+            if (!post) {
+                return {
+                    error: true,
+                    data: null,
+                    message: 'Post not found',
+                };
+            }
+
+            // Get user's vote for this post
+            const userVote = await this.userVoteRepository.findOne({
+                where: { userId, postId }
+            });
+
+            // Get user's favorite status for this post
+            const userFavorite = await this.userFavoriteRepository.findOne({
+                where: { userId, postId }
+            });
+
+            const result = {
+                hasVoted: !!userVote,
+                voteType: userVote ? userVote.voteType : null,
+                votedAt: userVote ? userVote.createdAt : null,
+                hasFavorited: !!userFavorite,
+                favoritedAt: userFavorite ? userFavorite.createdAt : null,
+            };
+
+            return {
+                error: false,
+                data: result,
+                message: 'User vote status retrieved successfully',
+            };
+        } catch (e) {
+            return {
+                error: true,
+                data: null,
+                message: e.message || 'Failed to get user vote status',
             };
         }
     }

@@ -10,6 +10,7 @@ import { AdminUpdatePostDto } from './dto/admin-update-post.dto';
 import { AdminPostFilterDto } from './dto/admin-post-filter.dto';
 import { AdminLoginDto } from './dto/admin-login.dto';
 import { BulkUpdatePostDto, BulkDeletePostDto } from './dto/bulk-action.dto';
+import { UserStatisticsResponseDto } from './dto/user-statistics.dto';
 
 @ApiTags('Admin')
 @ApiBearerAuth()
@@ -38,6 +39,18 @@ export class AdminController {
   @Get('posts/statistics')
   async getPostsStatistics() {
     return this.adminService.getPostsStatistics();
+  }
+
+  @ApiOperation({ summary: 'Admin: Get detailed users statistics' })
+  @ApiResponse({
+    status: 200,
+    description: 'Users statistics fetched successfully',
+    type: UserStatisticsResponseDto
+  })
+  @UseGuards(AdminGuard)
+  @Get('users/statistics')
+  async getUsersStatistics() {
+    return this.adminService.getUsersStatistics();
   }
 
   @ApiOperation({ summary: 'Admin: Get reported posts' })
@@ -307,3 +320,5 @@ export class AdminController {
     return this.adminService.getAllUsers(pageNum, pageSizeNum);
   }
 }
+
+

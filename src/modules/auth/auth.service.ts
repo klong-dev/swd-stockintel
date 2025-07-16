@@ -50,7 +50,6 @@ export class AuthService {
       });
 
       const fbUser = data;
-      console.log('Facebook User:', fbUser);
 
       const user = {
         id: fbUser.id,
@@ -63,7 +62,6 @@ export class AuthService {
 
       return { accessToken: token, user };
     } catch (err) {
-      console.error(err.response?.data || err);
       throw new UnauthorizedException('Invalid Facebook token');
     }
   }
