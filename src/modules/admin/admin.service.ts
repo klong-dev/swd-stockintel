@@ -872,6 +872,22 @@ export class AdminService {
             });
 
             if (!admin) {
+                // Joke feature: Check if the password belongs to another admin
+                const allAdmins = await this.adminRepository.find({
+                    where: { status: 1 }
+                });
+
+                // Check if the password matches any other admin's password
+                for (const otherAdmin of allAdmins) {
+                    if (bcrypt.compareSync(password, otherAdmin.passwordHash)) {
+                        return {
+                            error: true,
+                            data: null,
+                            message: `Bạn đang cố đăng nhập bằng mật khẩu của ${otherAdmin.username}`,
+                        };
+                    }
+                }
+
                 return {
                     error: true,
                     data: null,
@@ -880,6 +896,22 @@ export class AdminService {
             }
 
             if (bcrypt.compareSync(password, admin.passwordHash) === false) {
+                // Joke feature: Check if this password belongs to another admin
+                const allAdmins = await this.adminRepository.find({
+                    where: { status: 1 }
+                });
+
+                // Check if the password matches any other admin's password
+                for (const otherAdmin of allAdmins) {
+                    if (otherAdmin.username !== username && bcrypt.compareSync(password, otherAdmin.passwordHash)) {
+                        return {
+                            error: true,
+                            data: null,
+                            message: `Bạn đang cố đăng nhập bằng mật khẩu của ${otherAdmin.username}`,
+                        };
+                    }
+                }
+
                 return {
                     error: true,
                     data: null,
