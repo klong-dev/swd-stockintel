@@ -71,7 +71,7 @@ export class PostService {
             try {
                 await this.notificationService.sendPostNotification(
                     createPostDto.title,
-                    user.fullName || user.username || 'Người dùng',
+                    user,
                     saved.postId
                 );
             } catch (notificationError) {
