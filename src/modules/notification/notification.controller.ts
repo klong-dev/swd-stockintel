@@ -1,190 +1,159 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Req, Query } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  UseGuards,
+  Req,
+  Query,
+  ValidationPipe,
+  HttpStatus,
+  HttpCode,
+} from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { NotificationService } from './notification.service';
 import { CreateNotificationDto } from './dto/create-notification.dto';
 import { UpdateNotificationDto } from './dto/update-notification.dto';
-import { JwtAuthGuard } from 'src/guards/jwt-auth.guard';
-import { ApiTags, ApiOperation, ApiParam, ApiBody, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import { RegisterExpoPushTokenDto } from './dto/register-expo-push-token.dto';
+import { SendNotificationDto } from './dto/send-notification.dto';
+import { JwtAuthGuard } from '../../guards/jwt-auth.guard';
+import { AdminGuard } from '../../guards/admin.guard';
 
-@ApiTags('Notifications')
-@ApiBearerAuth()
+@ApiTags('notifications')
 @Controller('notifications')
+@UseGuards(JwtAuthGuard)
+@ApiBearerAuth()
 export class NotificationController {
   constructor(private readonly notificationService: NotificationService) { }
 
-  @ApiOperation({ summary: 'Create a new notification' })
-  @ApiBody({ type: CreateNotificationDto })
-  @ApiResponse({
-    status: 201,
-    description: 'Notification created.',
-    schema: {
-      example: {
-        error: false,
-        data: { notificationId: 1, title: 'Notification Title', content: 'Notification content' },
-        message: 'Notification created successfully',
-      },
-    },
-  })
-  @ApiResponse({
-    status: 400,
-    description: 'Failed to create notification.',
-    schema: {
-      example: {
-        error: true,
-        data: null,
-        message: 'Failed to create notification',
-      },
-    },
-  })
-  @UseGuards(JwtAuthGuard)
+  // Expo Push Token Management
+  @Post('register-push-token')
+  @ApiOperation({ summary: 'Register Expo push token for user' })
+  @ApiResponse({ status: 201, description: 'Push token registered successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid push token format' })
+  async registerPushToken(
+    @Body(ValidationPipe) registerExpoPushTokenDto: RegisterExpoPushTokenDto,
+    @Req() req: any,
+  ) {
+    return this.notificationService.registerExpoPushToken(registerExpoPushTokenDto, req.user);
+  }
+
+  @Delete('push-token/:token')
+  @ApiOperation({ summary: 'Deactivate Expo push token' })
+  @ApiResponse({ status: 200, description: 'Push token deactivated successfully' })
+  @ApiResponse({ status: 404, description: 'Push token not found' })
+  async deactivatePushToken(@Param('token') token: string, @Req() req: any) {
+    return this.notificationService.deactivateExpoPushToken(token, req.user);
+  }
+
+  // Send Notifications (Admin only)
+  @Post('send')
+  @UseGuards(AdminGuard)
+  @ApiOperation({ summary: 'Send push notification to all devices (Admin only)' })
+  @ApiResponse({ status: 201, description: 'Notification sent successfully' })
+  @ApiResponse({ status: 403, description: 'Admin access required' })
+  async sendNotification(@Body(ValidationPipe) sendNotificationDto: SendNotificationDto, @Req() req: any) {
+    return this.notificationService.sendPushNotification(sendNotificationDto, req.user);
+  }
+
+  // Notification CRUD
   @Post()
-  create(@Body() createNotificationDto: CreateNotificationDto, @Req() req) {
+  @ApiOperation({ summary: 'Create a new notification' })
+  @ApiResponse({ status: 201, description: 'Notification created successfully' })
+  async create(
+    @Body(ValidationPipe) createNotificationDto: CreateNotificationDto,
+    @Req() req: any,
+  ) {
     return this.notificationService.create(createNotificationDto, req.user);
   }
 
-  @ApiOperation({ summary: 'Get all notifications' })
-  @ApiResponse({
-    status: 200,
-    description: 'All notifications fetched successfully',
-    schema: {
-      example: {
-        error: false,
-        data: {
-          items: [
-            { notificationId: 1, title: 'Notification Title', content: 'Notification content' }
-          ],
-          total: 1,
-          page: 1,
-          pageSize: 10
-        },
-        message: 'All notifications fetched successfully',
-      },
-    },
-  })
-  @ApiResponse({
-    status: 400,
-    description: 'Failed to fetch notifications.',
-    schema: {
-      example: {
-        error: true,
-        data: null,
-        message: 'Failed to fetch notifications',
-      },
-    },
-  })
   @Get()
-  findAll(@Query('page') page: string = '1', @Query('pageSize') pageSize: string = '10') {
-    return this.notificationService.findAll(Number(page), Number(pageSize));
+  @ApiOperation({ summary: 'Get all notifications for current user' })
+  @ApiQuery({ name: 'page', required: false, type: Number, description: 'Page number' })
+  @ApiQuery({ name: 'pageSize', required: false, type: Number, description: 'Items per page' })
+  @ApiResponse({ status: 200, description: 'Notifications retrieved successfully' })
+  async findUserNotifications(
+    @Req() req: any,
+    @Query('page') page?: number,
+    @Query('pageSize') pageSize?: number,
+  ) {
+    return this.notificationService.findByUser(req.user.userId, page, pageSize);
   }
 
-  @ApiOperation({ summary: 'Get notification by ID' })
-  @ApiParam({ name: 'id', type: Number })
-  @ApiResponse({
-    status: 200,
-    description: 'Notification fetched successfully',
-    schema: {
-      example: {
-        error: false,
-        data: { notificationId: 1, title: 'Notification Title', content: 'Notification content' },
-        message: 'Notification fetched successfully',
-      },
-    },
-  })
-  @ApiResponse({
-    status: 404,
-    description: 'Notification not found.',
-    schema: {
-      example: {
-        error: true,
-        data: null,
-        message: 'Notification not found',
-      },
-    },
-  })
+  @Get('all')
+  @UseGuards(AdminGuard)
+  @ApiOperation({ summary: 'Get all notifications (Admin only)' })
+  @ApiQuery({ name: 'page', required: false, type: Number, description: 'Page number' })
+  @ApiQuery({ name: 'pageSize', required: false, type: Number, description: 'Items per page' })
+  @ApiResponse({ status: 200, description: 'All notifications retrieved successfully' })
+  @ApiResponse({ status: 403, description: 'Admin access required' })
+  async findAll(@Query('page') page?: number, @Query('pageSize') pageSize?: number) {
+    return this.notificationService.findAll(page, pageSize);
+  }
+
+  @Get('stats')
+  @ApiOperation({ summary: 'Get notification statistics for current user' })
+  @ApiResponse({ status: 200, description: 'Notification stats retrieved successfully' })
+  async getStats(@Req() req: any) {
+    return this.notificationService.getNotificationStats(req.user);
+  }
+
+  @Get('push-tokens/count')
+  @UseGuards(AdminGuard)
+  @ApiOperation({ summary: 'Get active push tokens count (Admin only)' })
+  @ApiResponse({ status: 200, description: 'Active push tokens count retrieved successfully' })
+  @ApiResponse({ status: 403, description: 'Admin access required' })
+  async getActivePushTokensCount() {
+    return this.notificationService.getActivePushTokensCount();
+  }
+
   @Get(':id')
-  findOne(@Param('id') id: string) {
+  @ApiOperation({ summary: 'Get notification by ID' })
+  @ApiResponse({ status: 200, description: 'Notification retrieved successfully' })
+  @ApiResponse({ status: 404, description: 'Notification not found' })
+  async findOne(@Param('id') id: string) {
     return this.notificationService.findOne(+id);
   }
 
-  @ApiOperation({ summary: 'Update notification by ID' })
-  @ApiParam({ name: 'id', type: Number })
-  @ApiBody({ type: UpdateNotificationDto })
-  @ApiResponse({
-    status: 200,
-    description: 'Notification updated successfully',
-    schema: {
-      example: {
-        error: false,
-        data: { notificationId: 1, title: 'Notification Title', content: 'Notification content' },
-        message: 'Notification updated successfully',
-      },
-    },
-  })
-  @ApiResponse({
-    status: 404,
-    description: 'Notification not found.',
-    schema: {
-      example: {
-        error: true,
-        data: null,
-        message: 'Notification not found',
-      },
-    },
-  })
-  @ApiResponse({
-    status: 400,
-    description: 'Failed to update notification.',
-    schema: {
-      example: {
-        error: true,
-        data: null,
-        message: 'Failed to update notification',
-      },
-    },
-  })
-  @UseGuards(JwtAuthGuard)
+  @Patch(':id/read')
+  @ApiOperation({ summary: 'Mark notification as read' })
+  @ApiResponse({ status: 200, description: 'Notification marked as read' })
+  @ApiResponse({ status: 404, description: 'Notification not found' })
+  @ApiResponse({ status: 403, description: 'Access denied' })
+  async markAsRead(@Param('id') id: string, @Req() req: any) {
+    return this.notificationService.markAsRead(+id, req.user);
+  }
+
+  @Patch('mark-all-read')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Mark all notifications as read for current user' })
+  @ApiResponse({ status: 200, description: 'All notifications marked as read' })
+  async markAllAsRead(@Req() req: any) {
+    return this.notificationService.markAllAsRead(req.user);
+  }
+
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateNotificationDto: UpdateNotificationDto, @Req() req) {
+  @ApiOperation({ summary: 'Update notification' })
+  @ApiResponse({ status: 200, description: 'Notification updated successfully' })
+  @ApiResponse({ status: 404, description: 'Notification not found' })
+  @ApiResponse({ status: 403, description: 'Access denied' })
+  async update(
+    @Param('id') id: string,
+    @Body(ValidationPipe) updateNotificationDto: UpdateNotificationDto,
+    @Req() req: any,
+  ) {
     return this.notificationService.update(+id, updateNotificationDto, req.user);
   }
 
-  @ApiOperation({ summary: 'Delete notification by ID' })
-  @ApiParam({ name: 'id', type: Number })
-  @ApiResponse({
-    status: 200,
-    description: 'Notification deleted successfully',
-    schema: {
-      example: {
-        error: false,
-        data: {},
-        message: 'Notification deleted successfully',
-      },
-    },
-  })
-  @ApiResponse({
-    status: 404,
-    description: 'Notification not found.',
-    schema: {
-      example: {
-        error: true,
-        data: null,
-        message: 'Notification not found',
-      },
-    },
-  })
-  @ApiResponse({
-    status: 400,
-    description: 'Failed to delete notification.',
-    schema: {
-      example: {
-        error: true,
-        data: null,
-        message: 'Failed to delete notification',
-      },
-    },
-  })
-  @UseGuards(JwtAuthGuard)
   @Delete(':id')
-  remove(@Param('id') id: string, @Req() req) {
+  @ApiOperation({ summary: 'Delete notification' })
+  @ApiResponse({ status: 200, description: 'Notification deleted successfully' })
+  @ApiResponse({ status: 404, description: 'Notification not found' })
+  @ApiResponse({ status: 403, description: 'Access denied' })
+  async remove(@Param('id') id: string, @Req() req: any) {
     return this.notificationService.remove(+id, req.user);
   }
 }

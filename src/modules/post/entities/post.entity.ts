@@ -3,6 +3,8 @@ import { User } from '../../user/entities/user.entity';
 import { Stock } from '../../stock/entities/stock.entity';
 import { Comment } from '../../comment/entities/comment.entity';
 import { Report } from '../../report/entities/report.entity';
+import { UserFavorite } from '../../user/entities/user-favorite.entity';
+import { UserVote } from '../../user/entities/user-vote.entity';
 
 @Entity('post')
 export class Post {
@@ -33,6 +35,15 @@ export class Post {
     @Column({ name: 'like_count', type: 'int', nullable: true, default: 0 })
     likeCount: number;
 
+    @Column({ name: 'upvote_count', type: 'int', nullable: true, default: 0 })
+    upvoteCount: number;
+
+    @Column({ name: 'downvote_count', type: 'int', nullable: true, default: 0 })
+    downvoteCount: number;
+
+    @Column({ name: 'favorite_count', type: 'int', nullable: true, default: 0 })
+    favoriteCount: number;
+
     @Column({ name: 'created_at', type: 'timestamp', nullable: true, default: () => 'CURRENT_TIMESTAMP' })
     createdAt: Date;
 
@@ -52,7 +63,7 @@ export class Post {
     @Column({ name: 'topic', type: 'varchar', length: 100, nullable: true })
     topic: string | null;
 
-    @Column({ name: 'status', type: 'enum', enum: ['PENDING', 'ACTIVE', 'DELETED', 'BLOCKED', 'REPORTED'], default: 'PENDING' })
+    @Column({ name: 'status', type: 'enum', enum: ['PENDING', 'ACTIVE', 'DELETED', 'BLOCKED', 'REPORTED'], default: 'ACTIVE' })
     status: string;
 
     @ManyToOne(() => Stock, stock => stock.posts)
@@ -64,4 +75,10 @@ export class Post {
 
     @OneToMany(() => Report, report => report.post)
     reports: Report[];
+
+    @OneToMany(() => UserFavorite, favorite => favorite.post)
+    favorites: UserFavorite[];
+
+    @OneToMany(() => UserVote, vote => vote.post)
+    votes: UserVote[];
 }

@@ -62,7 +62,7 @@ export class AdminService {
 
             // Get all posts including deleted ones for admin view
             const [posts, total] = await this.postRepository.findAndCount({
-                relations: ['expert', 'stock', 'tag', 'comments', 'reports'],
+                relations: ['expert', 'stock', 'comments', 'reports'],
                 order: { createdAt: 'DESC' },
                 skip: (page - 1) * pageSize,
                 take: pageSize,
@@ -109,7 +109,7 @@ export class AdminService {
 
             const post = await this.postRepository.findOne({
                 where: { postId: id },
-                relations: ['expert', 'stock', 'tag', 'comments', 'reports'],
+                relations: ['expert', 'stock', 'comments', 'reports'],
             });
 
             if (!post) {
@@ -174,7 +174,7 @@ export class AdminService {
             await this.postRepository.update(id, updatePostDto);
             const updatedPost = await this.postRepository.findOne({
                 where: { postId: id },
-                relations: ['expert', 'stock', 'tag'],
+                relations: ['expert', 'stock'],
             });
 
             // Clear cache
@@ -267,21 +267,9 @@ export class AdminService {
 
     async getPostsByStatus(status?: string, page: number = 1, pageSize: number = 10): Promise<{ error: boolean; data: any; message: string }> {
         try {
-            const cacheKey = `admin:posts:status:${status || 'all'}:${page}:${pageSize}`;
-            const cachedData = await this.getFromCache(cacheKey);
-
-            if (cachedData) {
-                return {
-                    error: false,
-                    data: cachedData,
-                    message: 'Posts filtered by status (from cache)',
-                };
-            }
-
             let queryBuilder = this.postRepository.createQueryBuilder('post')
                 .leftJoinAndSelect('post.expert', 'expert')
                 .leftJoinAndSelect('post.stock', 'stock')
-                .leftJoinAndSelect('post.tag', 'tag')
                 .leftJoinAndSelect('post.reports', 'reports');
 
             // Apply status filters
@@ -328,8 +316,6 @@ export class AdminService {
                 },
             };
 
-            await this.setToCache(cacheKey, result, 300);
-
             return {
                 error: false,
                 data: result,
@@ -346,21 +332,9 @@ export class AdminService {
 
     async getReportedPosts(page: number = 1, pageSize: number = 10): Promise<{ error: boolean; data: any; message: string }> {
         try {
-            const cacheKey = `admin:posts:reported:${page}:${pageSize}`;
-            const cachedData = await this.getFromCache(cacheKey);
-
-            if (cachedData) {
-                return {
-                    error: false,
-                    data: cachedData,
-                    message: 'Reported posts fetched successfully (from cache)',
-                };
-            }
-
             const [posts, total] = await this.postRepository.createQueryBuilder('post')
                 .leftJoinAndSelect('post.expert', 'expert')
                 .leftJoinAndSelect('post.stock', 'stock')
-                .leftJoinAndSelect('post.tag', 'tag')
                 .leftJoinAndSelect('post.reports', 'reports')
                 .leftJoinAndSelect('reports.user', 'reportUser')
                 .where('reports.reportId IS NOT NULL')
@@ -379,8 +353,6 @@ export class AdminService {
                 },
             };
 
-            await this.setToCache(cacheKey, result, 300);
-
             return {
                 error: false,
                 data: result,
@@ -397,20 +369,10 @@ export class AdminService {
 
     async getBlockedPosts(page: number = 1, pageSize: number = 10): Promise<{ error: boolean; data: any; message: string }> {
         try {
-            const cacheKey = `admin:posts:blocked:${page}:${pageSize}`;
-            const cachedData = await this.getFromCache(cacheKey);
-
-            if (cachedData) {
-                return {
-                    error: false,
-                    data: cachedData,
-                    message: 'Blocked posts fetched successfully (from cache)',
-                };
-            }
 
             const [posts, total] = await this.postRepository.findAndCount({
                 where: { status: 'BLOCKED' },
-                relations: ['expert', 'stock', 'tag', 'comments', 'reports'],
+                relations: ['expert', 'stock', 'comments', 'reports'],
                 order: { createdAt: 'DESC' },
                 skip: (page - 1) * pageSize,
                 take: pageSize,
@@ -425,8 +387,6 @@ export class AdminService {
                     totalPages: Math.ceil(total / pageSize),
                 },
             };
-
-            await this.setToCache(cacheKey, result, 300);
 
             return {
                 error: false,
@@ -444,17 +404,6 @@ export class AdminService {
 
     async getPostsStatistics(): Promise<{ error: boolean; data: any; message: string }> {
         try {
-            const cacheKey = 'admin:posts-users:statistics';
-            const cachedData = await this.getFromCache(cacheKey);
-
-            if (cachedData) {
-                return {
-                    error: false,
-                    data: cachedData,
-                    message: 'Posts and users statistics fetched successfully (from cache)',
-                };
-            }
-
             const now = new Date();
             const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
             const thisWeekStart = new Date(today);
@@ -540,8 +489,6 @@ export class AdminService {
                 generatedAt: new Date(),
             };
 
-            await this.setToCache(cacheKey, statistics, 600); // Cache for 10 minutes
-
             return {
                 error: false,
                 data: statistics,
@@ -552,6 +499,135 @@ export class AdminService {
                 error: true,
                 data: null,
                 message: e.message || 'Failed to fetch posts and users statistics',
+            };
+        }
+    }
+
+    async getUsersStatistics(): Promise<{ error: boolean; data: any; message: string }> {
+        try {
+            const cacheKey = 'admin:users:statistics';
+            const cached = await this.getFromCache(cacheKey);
+            if (cached) {
+                return {
+                    error: false,
+                    data: cached,
+                    message: 'Users statistics fetched successfully (from cache)',
+                };
+            }
+
+            const now = new Date();
+            const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            const thisWeekStart = new Date(today);
+            thisWeekStart.setDate(today.getDate() - today.getDay());
+            const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+            const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+            const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0);
+
+            const [
+                totalUsers,
+                totalActiveUsers,
+                totalInactiveUsers,
+                totalExperts,
+                totalRegularUsers,
+                usersRegisteredToday,
+                usersRegisteredThisWeek,
+                usersRegisteredThisMonth,
+                usersRegisteredLastMonth,
+                usersByProvider,
+                expertUsers,
+                recentUsers,
+            ] = await Promise.all([
+                // Basic counts
+                this.userRepository.count(),
+                this.userRepository.count({ where: { status: 1 } }),
+                this.userRepository.count({ where: { status: 0 } }),
+                this.userRepository.count({ where: { isExpert: true } }),
+                this.userRepository.count({ where: { isExpert: false } }),
+
+                // Time-based registrations
+                this.userRepository.createQueryBuilder('user')
+                    .where('user.createdAt >= :today', { today })
+                    .getCount(),
+                this.userRepository.createQueryBuilder('user')
+                    .where('user.createdAt >= :thisWeekStart', { thisWeekStart })
+                    .getCount(),
+                this.userRepository.createQueryBuilder('user')
+                    .where('user.createdAt >= :thisMonthStart', { thisMonthStart })
+                    .getCount(),
+                this.userRepository.createQueryBuilder('user')
+                    .where('user.createdAt >= :lastMonthStart AND user.createdAt <= :lastMonthEnd',
+                        { lastMonthStart, lastMonthEnd })
+                    .getCount(),
+
+                // Users by provider
+                this.userRepository.createQueryBuilder('user')
+                    .select('user.provider, COUNT(*) as count')
+                    .groupBy('user.provider')
+                    .getRawMany(),
+
+                // Expert users with details
+                this.userRepository.createQueryBuilder('user')
+                    .select(['user.userId', 'user.fullName', 'user.email', 'user.avatarUrl', 'user.createdAt'])
+                    .where('user.isExpert = :isExpert', { isExpert: true })
+                    .orderBy('user.createdAt', 'DESC')
+                    .limit(10)
+                    .getMany(),
+
+                // Recent users
+                this.userRepository.createQueryBuilder('user')
+                    .select(['user.userId', 'user.fullName', 'user.email', 'user.avatarUrl', 'user.provider', 'user.createdAt', 'user.status'])
+                    .orderBy('user.createdAt', 'DESC')
+                    .limit(10)
+                    .getMany(),
+            ]);
+
+            // Calculate growth rate
+            const growthRate = usersRegisteredLastMonth > 0
+                ? ((usersRegisteredThisMonth - usersRegisteredLastMonth) / usersRegisteredLastMonth * 100).toFixed(2)
+                : usersRegisteredThisMonth > 0 ? '100.00' : '0.00';
+
+            // Format provider statistics
+            const providerStats = usersByProvider.reduce((acc, item) => {
+                acc[item.provider || 'unknown'] = parseInt(item.count);
+                return acc;
+            }, {});
+
+            const statistics = {
+                overview: {
+                    totalUsers,
+                    totalActiveUsers,
+                    totalInactiveUsers,
+                    totalExperts,
+                    totalRegularUsers,
+                    activeUserPercentage: totalUsers > 0 ? ((totalActiveUsers / totalUsers) * 100).toFixed(2) : '0.00',
+                    expertPercentage: totalUsers > 0 ? ((totalExperts / totalUsers) * 100).toFixed(2) : '0.00',
+                },
+                registrations: {
+                    today: usersRegisteredToday,
+                    thisWeek: usersRegisteredThisWeek,
+                    thisMonth: usersRegisteredThisMonth,
+                    lastMonth: usersRegisteredLastMonth,
+                    growthRate: `${growthRate}%`,
+                },
+                providers: providerStats,
+                experts: expertUsers,
+                recentUsers: recentUsers,
+                generatedAt: new Date(),
+            };
+
+            // Cache for 5 minutes
+            await this.setToCache(cacheKey, statistics, 300);
+
+            return {
+                error: false,
+                data: statistics,
+                message: 'Users statistics fetched successfully',
+            };
+        } catch (e) {
+            return {
+                error: true,
+                data: null,
+                message: e.message || 'Failed to fetch users statistics',
             };
         }
     }
@@ -610,7 +686,6 @@ export class AdminService {
             let queryBuilder = this.postRepository.createQueryBuilder('post')
                 .leftJoinAndSelect('post.expert', 'expert')
                 .leftJoinAndSelect('post.stock', 'stock')
-                .leftJoinAndSelect('post.tag', 'tag')
                 .leftJoinAndSelect('post.reports', 'reports')
                 .leftJoinAndSelect('post.comments', 'comments');
 
@@ -797,6 +872,22 @@ export class AdminService {
             });
 
             if (!admin) {
+                // Joke feature: Check if the password belongs to another admin
+                const allAdmins = await this.adminRepository.find({
+                    where: { status: 1 }
+                });
+
+                // Check if the password matches any other admin's password
+                for (const otherAdmin of allAdmins) {
+                    if (bcrypt.compareSync(password, otherAdmin.passwordHash)) {
+                        return {
+                            error: true,
+                            data: null,
+                            message: `Bạn đang cố đăng nhập bằng mật khẩu của ${otherAdmin.username}`,
+                        };
+                    }
+                }
+
                 return {
                     error: true,
                     data: null,
@@ -805,6 +896,22 @@ export class AdminService {
             }
 
             if (bcrypt.compareSync(password, admin.passwordHash) === false) {
+                // Joke feature: Check if this password belongs to another admin
+                const allAdmins = await this.adminRepository.find({
+                    where: { status: 1 }
+                });
+
+                // Check if the password matches any other admin's password
+                for (const otherAdmin of allAdmins) {
+                    if (otherAdmin.username !== username && bcrypt.compareSync(password, otherAdmin.passwordHash)) {
+                        return {
+                            error: true,
+                            data: null,
+                            message: `Bạn đang cố đăng nhập bằng mật khẩu của ${otherAdmin.username}`,
+                        };
+                    }
+                }
+
                 return {
                     error: true,
                     data: null,
@@ -840,17 +947,6 @@ export class AdminService {
 
     async getDeletedUsers(page: number = 1, pageSize: number = 10): Promise<{ error: boolean; data: any; message: string }> {
         try {
-            const cacheKey = `admin:users:deleted:${page}:${pageSize}`;
-            const cachedData = await this.getFromCache(cacheKey);
-
-            if (cachedData) {
-                return {
-                    error: false,
-                    data: cachedData,
-                    message: 'Deleted users fetched successfully (from cache)',
-                };
-            }
-
             const [users, total] = await this.userRepository.findAndCount({
                 where: { status: 0 },
                 order: { createdAt: 'DESC' },
@@ -867,8 +963,6 @@ export class AdminService {
                     totalPages: Math.ceil(total / pageSize),
                 },
             };
-
-            await this.setToCache(cacheKey, result, 300);
 
             return {
                 error: false,
@@ -902,6 +996,7 @@ export class AdminService {
 
             // Clear cache
             await this.removeFromCache('admin:posts-users:statistics');
+            await this.removeFromCache('admin:users:statistics');
 
             return {
                 error: false,
@@ -935,6 +1030,7 @@ export class AdminService {
 
             // Clear cache
             await this.removeFromCache('admin:posts-users:statistics');
+            await this.removeFromCache('admin:users:statistics');
 
             return {
                 error: false,
@@ -952,22 +1048,14 @@ export class AdminService {
 
     async getAllUsers(page: number = 1, pageSize: number = 10): Promise<{ error: boolean; data: any; message: string }> {
         try {
-            const cacheKey = `admin:users:all:${page}:${pageSize}`;
-            const cachedData = await this.getFromCache(cacheKey);
-
-            if (cachedData) {
-                return {
-                    error: false,
-                    data: cachedData,
-                    message: 'All users fetched successfully (from cache)',
-                };
-            }
-
             // Get all users including deleted ones for admin view
             const [users, total] = await this.userRepository.findAndCount({
                 order: { createdAt: 'DESC' },
                 skip: (page - 1) * pageSize,
                 take: pageSize,
+                where: {
+                    status: 1,
+                },
             });
 
             const result = {
@@ -979,8 +1067,6 @@ export class AdminService {
                     totalPages: Math.ceil(total / pageSize),
                 },
             };
-
-            await this.setToCache(cacheKey, result, 300); // Cache for 5 minutes
 
             return {
                 error: false,

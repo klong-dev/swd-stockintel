@@ -19,6 +19,7 @@ import { RedisModule } from './modules/redis/redis.module';
 import { CloudinaryModule } from './modules/cloudinary/cloudinary.module';
 import { TagModule } from './modules/tag/tag.module';
 import { NewsModule } from './modules/news/news.module';
+import { PodcastModule } from './modules/podcast/podcast.module';
 
 
 @Module({
@@ -45,7 +46,8 @@ import { NewsModule } from './modules/news/news.module';
     RedisModule,
     CloudinaryModule,
     TagModule,
-    NewsModule
+    NewsModule,
+    PodcastModule
   ],
   controllers: [AppController],
   providers: [AppService],

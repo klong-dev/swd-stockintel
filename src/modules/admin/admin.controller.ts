@@ -10,6 +10,7 @@ import { AdminUpdatePostDto } from './dto/admin-update-post.dto';
 import { AdminPostFilterDto } from './dto/admin-post-filter.dto';
 import { AdminLoginDto } from './dto/admin-login.dto';
 import { BulkUpdatePostDto, BulkDeletePostDto } from './dto/bulk-action.dto';
+import { UserStatisticsResponseDto } from './dto/user-statistics.dto';
 
 @ApiTags('Admin')
 @ApiBearerAuth()
@@ -38,6 +39,18 @@ export class AdminController {
   @Get('posts/statistics')
   async getPostsStatistics() {
     return this.adminService.getPostsStatistics();
+  }
+
+  @ApiOperation({ summary: 'Admin: Get detailed users statistics' })
+  @ApiResponse({
+    status: 200,
+    description: 'Users statistics fetched successfully',
+    type: UserStatisticsResponseDto
+  })
+  @UseGuards(AdminGuard)
+  @Get('users/statistics')
+  async getUsersStatistics() {
+    return this.adminService.getUsersStatistics();
   }
 
   @ApiOperation({ summary: 'Admin: Get reported posts' })
@@ -199,7 +212,17 @@ export class AdminController {
 
   @ApiOperation({ summary: 'Admin: Login' })
   @ApiResponse({ status: 200, description: 'Admin login successful' })
-  @ApiResponse({ status: 401, description: 'Invalid credentials' })
+  @ApiResponse({
+    status: 401,
+    description: 'Invalid credentials or humorous password mismatch message',
+    schema: {
+      example: {
+        error: true,
+        data: null,
+        message: 'Login successfully',
+      }
+    }
+  })
   @HttpPost('login')
   async adminLogin(@Body() loginDto: AdminLoginDto) {
     return this.adminService.adminLogin(loginDto);
@@ -307,3 +330,5 @@ export class AdminController {
     return this.adminService.getAllUsers(pageNum, pageSizeNum);
   }
 }
+
+

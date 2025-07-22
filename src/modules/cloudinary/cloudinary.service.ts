@@ -25,6 +25,23 @@ export class CloudinaryService {
         );
     }
 
+    async uploadAudioFromBuffer(buffer: Buffer, folder?: string): Promise<string> {
+        return this.uploadWithRetry(() =>
+            new Promise<string>((resolve, reject) => {
+                this.cloudinary.uploader.upload_stream(
+                    {
+                        folder,
+                        resource_type: 'video' // Cloudinary uses 'video' resource type for audio files
+                    },
+                    (error: UploadApiErrorResponse, result: UploadApiResponse) => {
+                        if (error) return reject(error);
+                        resolve(result.secure_url);
+                    },
+                ).end(buffer);
+            })
+        );
+    }
+
     async uploadImageFromPath(filePath: string, folder?: string): Promise<string> {
         return this.uploadWithRetry(() =>
             new Promise<string>((resolve, reject) => {
@@ -43,6 +60,16 @@ export class CloudinaryService {
     async deleteImage(publicId: string): Promise<boolean> {
         try {
             await this.cloudinary.uploader.destroy(publicId);
+            return true;
+        } catch (error) {
+            this.logger.error('Cloudinary delete error', error);
+            return false;
+        }
+    }
+
+    async deleteFile(publicId: string, resourceType: 'image' | 'video' = 'image'): Promise<boolean> {
+        try {
+            await this.cloudinary.uploader.destroy(publicId, { resource_type: resourceType });
             return true;
         } catch (error) {
             this.logger.error('Cloudinary delete error', error);
