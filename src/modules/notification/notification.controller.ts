@@ -55,8 +55,8 @@ export class NotificationController {
   @ApiOperation({ summary: 'Send push notification to all devices (Admin only)' })
   @ApiResponse({ status: 201, description: 'Notification sent successfully' })
   @ApiResponse({ status: 403, description: 'Admin access required' })
-  async sendNotification(@Body(ValidationPipe) sendNotificationDto: SendNotificationDto) {
-    return this.notificationService.sendPushNotification(sendNotificationDto);
+  async sendNotification(@Body(ValidationPipe) sendNotificationDto: SendNotificationDto, @Req() req: any) {
+    return this.notificationService.sendPushNotification(sendNotificationDto, req.user);
   }
 
   // Notification CRUD

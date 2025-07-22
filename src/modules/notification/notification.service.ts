@@ -10,6 +10,7 @@ import { SendNotificationDto } from './dto/send-notification.dto';
 import { RedisService } from 'src/modules/redis/redis.service';
 import { paginate } from '../../utils/pagination';
 import { Expo, ExpoPushMessage, ExpoPushTicket } from 'expo-server-sdk';
+import { User } from '../user/entities/user.entity';
 
 @Injectable()
 export class NotificationService {
@@ -140,7 +141,7 @@ export class NotificationService {
     }
 
     // Send Push Notifications
-    async sendPushNotification(sendNotificationDto: SendNotificationDto) {
+    async sendPushNotification(sendNotificationDto: SendNotificationDto, user: any) {
         try {
             const { title, body, data, sound, badge } = sendNotificationDto;
 
@@ -188,6 +189,7 @@ export class NotificationService {
                 data: data || {},
                 type: 'push_notification',
                 deliveryStatus: 'sent',
+                userId: user.userId,
             });
 
             const savedNotification = await this.notificationRepository.save(notification);
@@ -230,11 +232,11 @@ export class NotificationService {
     }
 
     // Send notification when new post is created
-    async sendPostNotification(postTitle: string, postAuthor: string, postId: number) {
+    async sendPostNotification(postTitle: string, user: any, postId: number) {
         try {
             const notificationData = {
                 title: 'Bài viết mới',
-                body: `${postAuthor} vừa đăng bài viết: "${postTitle}"`,
+                body: `${user.fullName || user.email || 'Người dùng'} vừa đăng bài viết: "${postTitle}"`,
                 data: {
                     type: 'NEW_POST',
                     postId: postId,
@@ -244,7 +246,7 @@ export class NotificationService {
                 badge: 1,
             };
 
-            return await this.sendPushNotification(notificationData);
+            return await this.sendPushNotification(notificationData, user);
         } catch (e) {
             this.logger.error('Error sending post notification:', e);
             return {
