@@ -45,6 +45,13 @@ export class ReportService {
 
     async create(createReportDto: CreateReportDto, user: any) {
         try {
+            const existingReport = await this.reportRepository.findOne({
+                where: { postId: createReportDto.postId, userId: user.userId },
+            });
+            if (existingReport) {
+                throw new ForbiddenException('You have already reported this post');
+            }
+
             const report = this.reportRepository.create({
                 ...createReportDto,
                 userId: user.userId,
