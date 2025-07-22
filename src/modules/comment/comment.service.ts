@@ -172,6 +172,11 @@ export class CommentService {
                 await this.clearCachePattern(`${this.cachePrefix}:post:${savedReply.postId}:*`);
             }
 
+            // Clear post-specific comment cache since replies are included
+            if (saved.postId) {
+                await this.removeFromCache(`${this.cachePrefix}:post:${saved.postId}:*`);
+            }
+
             return {
                 error: false,
                 data: savedReply,
