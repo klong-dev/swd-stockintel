@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { PodcastClient } from '../entities/podcast-client.entity';
 import { RedisService } from '../../redis/redis.service';
+import { log } from 'console';
 
 @Injectable()
 export class PodcastAuthGuard implements CanActivate {
@@ -19,8 +20,26 @@ export class PodcastAuthGuard implements CanActivate {
     async canActivate(context: ExecutionContext): Promise<boolean> {
         const request = context.switchToHttp().getRequest();
 
-        // Only check for secretKey in request body
-        const secretKey = request.body?.secretKey;
+        // Check for secretKey in different places depending on content type
+        let secretKey: string | undefined;
+
+        // For multipart/form-data (file uploads), check in request body fields
+        if (request.is('multipart/form-data') || request.body?.secretKey) {
+            secretKey = request.body?.secretKey;
+        }
+
+        // For form-data, the body might not be parsed yet, check raw body or fields
+        if (!secretKey && request.body && typeof request.body === 'object') {
+            secretKey = request.body.secretKey;
+        }
+
+        // If still not found and it's a file upload, it might be in the parsed fields
+        if (!secretKey && request.file) {
+            // In this case, the form fields might be in request.body after multer parsing
+            secretKey = request.body?.secretKey;
+        }
+
+        log(`Checking secretKey: ${secretKey}, body:`, request.body);
 
         if (!secretKey) {
             throw new UnauthorizedException('Missing secretKey in request body');

@@ -3,6 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { PodcastService } from './podcast.service';
 import { PodcastController } from './podcast.controller';
 import { PodcastAdminController } from './podcast-admin.controller';
+import { PodcastPublicController } from './podcast-public.controller';
 import { Podcast } from './entities/podcast.entity';
 import { PodcastClient } from './entities/podcast-client.entity';
 import { PodcastAuthGuard } from './guards/podcast-auth.guard';
@@ -17,7 +18,7 @@ import { JwtConfigModule } from '../../configs/jwt-config.module';
         RedisModule,
         JwtConfigModule,
     ],
-    controllers: [PodcastController, PodcastAdminController],
+    controllers: [PodcastController, PodcastAdminController, PodcastPublicController],
     providers: [PodcastService, PodcastAuthGuard],
     exports: [PodcastService],
 })

@@ -108,7 +108,6 @@ export class PodcastController {
     @ApiResponse({ status: 401, description: 'Unauthorized - invalid or missing secretKey' })
     @ApiResponse({ status: 413, description: 'File too large' })
     @UseInterceptors(FileInterceptor('audio'))
-    @UseGuards(PodcastAuthGuard)
     async uploadPodcast(
         @UploadedFile() audioFile: any,
         @Body() uploadPodcastDto: UploadPodcastDto,
@@ -118,14 +117,10 @@ export class PodcastController {
             throw new BadRequestException('Audio file is required');
         }
 
-        // uploadedBy can be any identifier from the client (e.g., external user ID, client name, etc.)
-        const uploadedBy = uploadPodcastDto.uploadedBy || req.podcastClient?.clientName || 'anonymous';
-
+        // The service will handle the secretKey validation internally
         return this.podcastService.uploadPodcast(
             audioFile,
-            uploadPodcastDto,
-            req.podcastClient,
-            uploadedBy
+            uploadPodcastDto
         );
     }
 
