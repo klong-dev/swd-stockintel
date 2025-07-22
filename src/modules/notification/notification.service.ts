@@ -10,6 +10,8 @@ import { paginate } from '../../utils/pagination';
 @Injectable()
 export class NotificationService {
     private readonly redis;
+    private readonly cachePrefix = 'notifications';
+
     constructor(
         @InjectRepository(Notification)
         private readonly notificationRepository: Repository<Notification>,
@@ -31,6 +33,13 @@ export class NotificationService {
         await this.redis.del(key);
     }
 
+    private async clearCachePattern(pattern: string): Promise<void> {
+        const keys = await this.redis.keys(pattern);
+        if (keys.length > 0) {
+            await this.redis.del(...keys);
+        }
+    }
+
     async create(createNotificationDto: CreateNotificationDto, user: any) {
         try {
             const notification = this.notificationRepository.create({
@@ -38,6 +47,10 @@ export class NotificationService {
                 userId: user.userId,
             });
             const data = await this.notificationRepository.save(notification);
+
+            // Clear all related cache keys
+            await this.clearCachePattern(`${this.cachePrefix}:*`);
+
             return {
                 error: false,
                 data,

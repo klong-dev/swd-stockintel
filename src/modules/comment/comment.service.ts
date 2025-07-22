@@ -38,6 +38,13 @@ export class CommentService {
         await this.redis.del(key);
     }
 
+    private async clearCachePattern(pattern: string): Promise<void> {
+        const keys = await this.redis.keys(pattern);
+        if (keys.length > 0) {
+            await this.redis.del(...keys);
+        }
+    }
+
     async create(createCommentDto: CreateCommentDto, user: any) {
         try {
             // Explicitly extract only the fields we want from the DTO
@@ -109,9 +116,9 @@ export class CommentService {
             await this.removeFromCache(`${this.cachePrefix}:all`);
             await this.removeFromCache(`${this.cachePrefix}:${savedComment.commentId}`);
 
-            // Clear post-specific comment cache
+            // Clear post-specific comment cache - scan and clear all related keys
             if (savedComment.postId) {
-                await this.removeFromCache(`${this.cachePrefix}:post:${savedComment.postId}:*`);
+                await this.clearCachePattern(`${this.cachePrefix}:post:${savedComment.postId}:*`);
             }
             return {
                 error: false,
@@ -161,9 +168,9 @@ export class CommentService {
             await this.removeFromCache(`${this.cachePrefix}:${savedReply.commentId}`);
             await this.removeFromCache(`${this.cachePrefix}:replies:${parentCommentId}`);
 
-            // Clear post-specific comment cache since replies are included
+            // Clear post-specific comment cache since replies are included - scan and clear all related keys
             if (savedReply.postId) {
-                await this.removeFromCache(`${this.cachePrefix}:post:${savedReply.postId}:*`);
+                await this.clearCachePattern(`${this.cachePrefix}:post:${savedReply.postId}:*`);
             }
 
             return {
@@ -350,8 +357,10 @@ export class CommentService {
                 isEdited: true,
                 updatedAt: new Date()
             });
-            await this.removeFromCache(`${this.cachePrefix}:all`);
-            await this.removeFromCache(`${this.cachePrefix}:${id}`);
+
+            // Clear all related cache keys
+            await this.clearCachePattern(`${this.cachePrefix}:*`);
+
             const updated = await this.commentRepository.findOne({
                 where: { commentId: id },
                 relations: ['user', 'post']
@@ -393,16 +402,8 @@ export class CommentService {
 
             const result = await this.commentRepository.delete(id);
 
-            // Clear all related cache
-            await this.removeFromCache(`${this.cachePrefix}:all`);
-            await this.removeFromCache(`${this.cachePrefix}:${id}`);
-            await this.removeFromCache(`${this.cachePrefix}:${id}:with-replies`);
-            await this.removeFromCache(`${this.cachePrefix}:${id}:no-replies`);
-
-            // If this comment has a parent, clear the parent's replies cache
-            if (comment.parentCommentId) {
-                await this.removeFromCache(`${this.cachePrefix}:replies:${comment.parentCommentId}`);
-            }
+            // Clear all related cache keys
+            await this.clearCachePattern(`${this.cachePrefix}:*`);
 
             return {
                 error: false,

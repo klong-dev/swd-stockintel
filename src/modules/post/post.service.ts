@@ -41,6 +41,13 @@ export class PostService {
         await this.redis.del(key);
     }
 
+    private async clearCachePattern(pattern: string): Promise<void> {
+        const keys = await this.redis.keys(pattern);
+        if (keys.length > 0) {
+            await this.redis.del(...keys);
+        }
+    }
+
     async create(createPostDto: CreatePostDto, user: any, sourceBuffer?: Buffer) {
         let sourceUrl = null;
         if (sourceBuffer) {
@@ -52,8 +59,10 @@ export class PostService {
             sourceUrl
         });
         const saved = await this.postRepository.save(post);
-        await this.removeFromCache('posts:all');
-        await this.removeFromCache(`posts:${saved.postId}`);
+
+        // Clear all related cache keys
+        await this.clearCachePattern('posts:*');
+
         try {
             return {
                 error: false,
