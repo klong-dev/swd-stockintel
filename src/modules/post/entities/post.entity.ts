@@ -63,7 +63,7 @@ export class Post {
     @Column({ name: 'topic', type: 'varchar', length: 100, nullable: true })
     topic: string | null;
 
-    @Column({ name: 'status', type: 'enum', enum: ['PENDING', 'ACTIVE', 'DELETED', 'BLOCKED', 'REPORTED'], default: 'PENDING' })
+    @Column({ name: 'status', type: 'enum', enum: ['PENDING', 'ACTIVE', 'DELETED', 'BLOCKED', 'REPORTED'], default: 'ACTIVE' })
     status: string;
 
     @ManyToOne(() => Stock, stock => stock.posts)
