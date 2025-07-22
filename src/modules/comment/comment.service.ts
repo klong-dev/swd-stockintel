@@ -167,7 +167,6 @@ export class CommentService {
             await this.removeFromCache(`${this.cachePrefix}:all`);
             await this.removeFromCache(`${this.cachePrefix}:${savedReply.commentId}`);
             await this.removeFromCache(`${this.cachePrefix}:replies:${parentCommentId}`);
-
             // Clear post-specific comment cache since replies are included - scan and clear all related keys
             if (savedReply.postId) {
                 await this.clearCachePattern(`${this.cachePrefix}:post:${savedReply.postId}:*`);
