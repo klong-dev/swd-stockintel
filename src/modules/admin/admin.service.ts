@@ -426,6 +426,8 @@ export class AdminService {
                 relations: ['expert', 'stock'],
             });
 
+            await this.reportRepository.delete({ postId: id });
+
             // Clear cache
             await this.removeFromCache(`admin:post:${id}`);
             await this.removeFromCache('admin:posts:all*');
