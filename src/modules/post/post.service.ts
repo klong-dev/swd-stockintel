@@ -10,7 +10,6 @@ import { UserVote } from '../user/entities/user-vote.entity';
 import { RedisService } from 'src/modules/redis/redis.service';
 import { paginate } from '../../utils/pagination';
 import { CloudinaryService } from '../cloudinary/cloudinary.service';
-import { log } from 'console';
 
 @Injectable()
 export class PostService {
