@@ -302,10 +302,9 @@ export class PodcastService {
         page: number = 1,
         pageSize: number = 10,
         status?: 'draft' | 'published' | 'archived',
-        clientId?: number
     ) {
         try {
-            const cacheKey = `${this.cachePrefix}:all:${page}:${pageSize}:${status}:${clientId}`;
+            const cacheKey = `${this.cachePrefix}:all:${page}:${pageSize}:${status}}`;
             const cached = await this.getFromCache(cacheKey);
             if (cached) {
                 return {
@@ -322,10 +321,6 @@ export class PodcastService {
 
             if (status) {
                 queryBuilder.andWhere('podcast.status = :status', { status });
-            }
-
-            if (clientId) {
-                queryBuilder.andWhere('podcast.clientId = :clientId', { clientId });
             }
 
             const podcasts = await queryBuilder.getMany();

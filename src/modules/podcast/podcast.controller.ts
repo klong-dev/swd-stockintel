@@ -189,7 +189,6 @@ export class PodcastController {
             page || 1,
             pageSize || 10,
             status,
-            req.podcastClient.clientId
         );
     }
 
