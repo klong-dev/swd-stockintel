@@ -314,16 +314,12 @@ export class PodcastService {
                 };
             }
 
-            const queryBuilder = this.podcastRepository.createQueryBuilder('podcast')
-                .leftJoinAndSelect('podcast.client', 'client')
-                .leftJoinAndSelect('podcast.uploader', 'uploader')
-                .orderBy('podcast.createdAt', 'DESC');
+            const podcasts = await this.podcastRepository.find({
+                where: status ? { status } : {},
+                relations: ['client'],
+                order: { createdAt: 'DESC' },
+            });
 
-            if (status) {
-                queryBuilder.andWhere('podcast.status = :status', { status });
-            }
-
-            const podcasts = await queryBuilder.getMany();
             const paginated = paginate(podcasts, page, pageSize);
 
             await this.setToCache(cacheKey, paginated);

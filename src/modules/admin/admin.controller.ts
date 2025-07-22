@@ -329,6 +329,17 @@ export class AdminController {
 
     return this.adminService.getAllUsers(pageNum, pageSizeNum);
   }
+
+  @ApiOperation({ summary: 'Admin: Reject post report by setting reportCount to zero' })
+  @ApiParam({ name: 'id', type: 'number', description: 'Post ID' })
+  @ApiResponse({ status: 200, description: 'Post reports rejected successfully' })
+  @ApiResponse({ status: 404, description: 'Post not found' })
+  @ApiResponse({ status: 400, description: 'Post has no reports to reject' })
+  @UseGuards(AdminGuard)
+  @Patch('posts/:id/reject-reports')
+  async rejectPostReport(@Param('id', ParseIntPipe) id: number) {
+    return this.adminService.rejectPostReport(id);
+  }
 }
 
 
