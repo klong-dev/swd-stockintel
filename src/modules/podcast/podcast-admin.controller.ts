@@ -264,7 +264,6 @@ export class PodcastAdminController {
             page || 1,
             pageSize || 10,
             status,
-            clientId
         );
     }
 }
