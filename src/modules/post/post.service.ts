@@ -10,6 +10,7 @@ import { UserVote } from '../user/entities/user-vote.entity';
 import { RedisService } from 'src/modules/redis/redis.service';
 import { paginate } from '../../utils/pagination';
 import { CloudinaryService } from '../cloudinary/cloudinary.service';
+import { NotificationService } from '../notification/notification.service';
 
 @Injectable()
 export class PostService {
@@ -23,6 +24,7 @@ export class PostService {
         private readonly userVoteRepository: Repository<UserVote>,
         private readonly redisService: RedisService,
         private readonly cloudinaryService: CloudinaryService,
+        private readonly notificationService: NotificationService,
     ) {
         this.redis = this.redisService.getClient();
     }
@@ -48,24 +50,38 @@ export class PostService {
     }
 
     async create(createPostDto: CreatePostDto, user: any, sourceBuffer?: Buffer) {
-        let sourceUrl = null;
-        if (sourceBuffer) {
-            sourceUrl = await this.cloudinaryService.uploadImageFromBuffer(sourceBuffer, 'posts');
-        }
-        const post = this.postRepository.create({
-            ...createPostDto,
-            expertId: user.userId,
-            sourceUrl
-        });
-        const saved = await this.postRepository.save(post);
-
-        // Clear all related cache keys
-        await this.clearCachePattern('posts:*');
-
         try {
+            let sourceUrl = null;
+            if (sourceBuffer) {
+                sourceUrl = await this.cloudinaryService.uploadImageFromBuffer(sourceBuffer, 'posts');
+            }
+
+            const post = this.postRepository.create({
+                ...createPostDto,
+                expertId: user.userId,
+                sourceUrl
+            });
+
+            const saved = await this.postRepository.save(post);
+
+            // Clear all related cache keys
+            await this.clearCachePattern('posts:*');
+
+            // Send push notification to all users about the new post
+            try {
+                await this.notificationService.sendPostNotification(
+                    createPostDto.title,
+                    user.fullName || user.username || 'Người dùng',
+                    saved.postId
+                );
+            } catch (notificationError) {
+                console.log('Failed to send notification:', notificationError);
+                // Don't fail the post creation if notification fails
+            }
+
             return {
                 error: false,
-                saved,
+                data: saved,
                 message: 'Post created successfully',
             };
         } catch (e) {

@@ -3,8 +3,8 @@ import { IsInt, IsOptional, IsString, IsBoolean } from 'class-validator';
 
 export class CreateNotificationDto {
     @ApiProperty({ description: 'ID of the user to notify' })
-    @IsInt()
-    userId: number;
+    @IsString()
+    userId: string;
 
     @ApiProperty({ description: 'Type of notification' })
     @IsString()
