@@ -10,6 +10,8 @@ import { paginate } from '../../utils/pagination';
 @Injectable()
 export class StockService {
     private readonly redis;
+    private readonly cachePrefix = 'stocks';
+
     constructor(
         @InjectRepository(Stock)
         private readonly stockRepository: Repository<Stock>,
@@ -31,10 +33,21 @@ export class StockService {
         await this.redis.del(key);
     }
 
+    private async clearCachePattern(pattern: string): Promise<void> {
+        const keys = await this.redis.keys(pattern);
+        if (keys.length > 0) {
+            await this.redis.del(...keys);
+        }
+    }
+
     async create(createStockDto: CreateStockDto) {
         try {
             const stock = this.stockRepository.create(createStockDto);
             const data = await this.stockRepository.save(stock);
+
+            // Clear all related cache keys
+            await this.clearCachePattern(`${this.cachePrefix}:*`);
+
             return {
                 error: false,
                 data,

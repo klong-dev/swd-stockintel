@@ -10,6 +10,8 @@ import { paginate } from '../../utils/pagination';
 @Injectable()
 export class ReportService {
     private readonly redis;
+    private readonly cachePrefix = 'reports';
+
     constructor(
         @InjectRepository(Report)
         private readonly reportRepository: Repository<Report>,
@@ -31,6 +33,13 @@ export class ReportService {
         await this.redis.del(key);
     }
 
+    private async clearCachePattern(pattern: string): Promise<void> {
+        const keys = await this.redis.keys(pattern);
+        if (keys.length > 0) {
+            await this.redis.del(...keys);
+        }
+    }
+
     async create(createReportDto: CreateReportDto, user: any) {
         try {
             const report = this.reportRepository.create({
@@ -38,6 +47,10 @@ export class ReportService {
                 userId: user.userId,
             });
             const data = await this.reportRepository.save(report);
+
+            // Clear all related cache keys
+            await this.clearCachePattern(`${this.cachePrefix}:*`);
+
             return {
                 error: false,
                 data,

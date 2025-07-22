@@ -2,6 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Comment } from './entities/comment.entity';
+import { Post } from '../post/entities/post.entity';
+import { User } from '../user/entities/user.entity';
 import { CreateCommentDto } from './dto/create-comment.dto';
 import { UpdateCommentDto } from './dto/update-comment.dto';
 import { RedisService } from '../redis/redis.service';
@@ -14,6 +16,10 @@ export class CommentService {
     constructor(
         @InjectRepository(Comment)
         private readonly commentRepository: Repository<Comment>,
+        @InjectRepository(Post)
+        private readonly postRepository: Repository<Post>,
+        @InjectRepository(User)
+        private readonly userRepository: Repository<User>,
         private readonly redisService: RedisService,
     ) {
         this.redis = this.redisService.getClient();
@@ -32,24 +38,91 @@ export class CommentService {
         await this.redis.del(key);
     }
 
+    private async clearCachePattern(pattern: string): Promise<void> {
+        const keys = await this.redis.keys(pattern);
+        if (keys.length > 0) {
+            await this.redis.del(...keys);
+        }
+    }
+
     async create(createCommentDto: CreateCommentDto, user: any) {
         try {
+            // Explicitly extract only the fields we want from the DTO
+            const { content, postId, parentCommentId, isEdited, likeCount } = createCommentDto;
+
+            // Validate foreign key references before creating
+            if (postId) {
+                // Check if post exists
+                const postExists = await this.postRepository.findOne({
+                    where: { postId }
+                });
+
+                if (!postExists) {
+                    return {
+                        error: true,
+                        data: null,
+                        message: 'Post not found',
+                    };
+                }
+            }
+
+            if (parentCommentId) {
+                // Check if parent comment exists
+                const parentExists = await this.commentRepository.findOne({
+                    where: { commentId: parentCommentId }
+                });
+
+                if (!parentExists) {
+                    return {
+                        error: true,
+                        data: null,
+                        message: 'Parent comment not found',
+                    };
+                }
+            }
+
+            // Check if user exists
+            const userExists = await this.userRepository.findOne({
+                where: { userId: user.userId }
+            });
+
+            if (!userExists) {
+                return {
+                    error: true,
+                    data: null,
+                    message: 'User not found',
+                };
+            }
+
             const commentData = {
-                ...createCommentDto,
+                content,
+                postId: postId || null,
+                parentCommentId: parentCommentId || null,
+                isEdited: isEdited || false,
+                likeCount: likeCount || 0,
                 userId: user.userId,
             };
-            const comment = this.commentRepository.create(commentData);
-            const saved = await this.commentRepository.save(comment);
-            await this.removeFromCache(`${this.cachePrefix}:all`);
-            await this.removeFromCache(`${this.cachePrefix}:${saved.commentId}`);
 
-            // Clear post-specific comment cache
-            if (saved.postId) {
-                await this.removeFromCache(`${this.cachePrefix}:post:${saved.postId}:*`);
+            // Log the data being saved for debugging
+            console.log('Creating comment with data:', commentData);
+
+            // Use transaction to ensure data consistency
+            const savedComment = await this.commentRepository.manager.transaction(async manager => {
+                const comment = manager.create(Comment, commentData);
+                const saved = await manager.save(comment);
+                return Array.isArray(saved) ? saved[0] : saved;
+            });
+
+            await this.removeFromCache(`${this.cachePrefix}:all`);
+            await this.removeFromCache(`${this.cachePrefix}:${savedComment.commentId}`);
+
+            // Clear post-specific comment cache - scan and clear all related keys
+            if (savedComment.postId) {
+                await this.clearCachePattern(`${this.cachePrefix}:post:${savedComment.postId}:*`);
             }
             return {
                 error: false,
-                data: saved,
+                data: savedComment,
                 message: 'Comment created successfully',
             };
         } catch (e) {
@@ -87,19 +160,21 @@ export class CommentService {
             const reply = this.commentRepository.create(replyData);
             const saved = await this.commentRepository.save(reply);
 
+            // Ensure saved is a single entity, not an array
+            const savedReply = Array.isArray(saved) ? saved[0] : saved;
+
             // Clear relevant cache
             await this.removeFromCache(`${this.cachePrefix}:all`);
-            await this.removeFromCache(`${this.cachePrefix}:${saved.commentId}`);
+            await this.removeFromCache(`${this.cachePrefix}:${savedReply.commentId}`);
             await this.removeFromCache(`${this.cachePrefix}:replies:${parentCommentId}`);
-
-            // Clear post-specific comment cache since replies are included
-            if (saved.postId) {
-                await this.removeFromCache(`${this.cachePrefix}:post:${saved.postId}:*`);
+            // Clear post-specific comment cache since replies are included - scan and clear all related keys
+            if (savedReply.postId) {
+                await this.clearCachePattern(`${this.cachePrefix}:post:${savedReply.postId}:*`);
             }
 
             return {
                 error: false,
-                data: saved,
+                data: savedReply,
                 message: 'Reply created successfully',
             };
         } catch (e) {
@@ -281,8 +356,10 @@ export class CommentService {
                 isEdited: true,
                 updatedAt: new Date()
             });
-            await this.removeFromCache(`${this.cachePrefix}:all`);
-            await this.removeFromCache(`${this.cachePrefix}:${id}`);
+
+            // Clear all related cache keys
+            await this.clearCachePattern(`${this.cachePrefix}:*`);
+
             const updated = await this.commentRepository.findOne({
                 where: { commentId: id },
                 relations: ['user', 'post']
@@ -324,16 +401,8 @@ export class CommentService {
 
             const result = await this.commentRepository.delete(id);
 
-            // Clear all related cache
-            await this.removeFromCache(`${this.cachePrefix}:all`);
-            await this.removeFromCache(`${this.cachePrefix}:${id}`);
-            await this.removeFromCache(`${this.cachePrefix}:${id}:with-replies`);
-            await this.removeFromCache(`${this.cachePrefix}:${id}:no-replies`);
-
-            // If this comment has a parent, clear the parent's replies cache
-            if (comment.parentCommentId) {
-                await this.removeFromCache(`${this.cachePrefix}:replies:${comment.parentCommentId}`);
-            }
+            // Clear all related cache keys
+            await this.clearCachePattern(`${this.cachePrefix}:*`);
 
             return {
                 error: false,
