@@ -24,7 +24,7 @@ export class Podcast {
     @Column({ name: 'file_format', type: 'varchar', length: 10, nullable: true })
     fileFormat: string | null;
 
-    @Column({ name: 'status', type: 'enum', enum: ['draft', 'published', 'archived'], default: 'draft' })
+    @Column({ name: 'status', type: 'enum', enum: ['draft', 'published', 'archived'], default: 'published' })
     status: 'draft' | 'published' | 'archived';
 
     @Column({ name: 'play_count', type: 'int', default: 0 })
