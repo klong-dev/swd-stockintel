@@ -302,10 +302,9 @@ export class PodcastService {
         page: number = 1,
         pageSize: number = 10,
         status?: 'draft' | 'published' | 'archived',
-        clientId?: number
     ) {
         try {
-            const cacheKey = `${this.cachePrefix}:all:${page}:${pageSize}:${status}:${clientId}`;
+            const cacheKey = `${this.cachePrefix}:all:${page}:${pageSize}:${status}}`;
             const cached = await this.getFromCache(cacheKey);
             if (cached) {
                 return {
@@ -315,20 +314,12 @@ export class PodcastService {
                 };
             }
 
-            const queryBuilder = this.podcastRepository.createQueryBuilder('podcast')
-                .leftJoinAndSelect('podcast.client', 'client')
-                .leftJoinAndSelect('podcast.uploader', 'uploader')
-                .orderBy('podcast.createdAt', 'DESC');
+            const podcasts = await this.podcastRepository.find({
+                where: status ? { status } : {},
+                relations: ['client'],
+                order: { createdAt: 'DESC' },
+            });
 
-            if (status) {
-                queryBuilder.andWhere('podcast.status = :status', { status });
-            }
-
-            if (clientId) {
-                queryBuilder.andWhere('podcast.clientId = :clientId', { clientId });
-            }
-
-            const podcasts = await queryBuilder.getMany();
             const paginated = paginate(podcasts, page, pageSize);
 
             await this.setToCache(cacheKey, paginated);

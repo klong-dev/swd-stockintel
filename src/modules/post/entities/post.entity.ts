@@ -44,6 +44,9 @@ export class Post {
     @Column({ name: 'favorite_count', type: 'int', nullable: true, default: 0 })
     favoriteCount: number;
 
+    @Column({ name: 'report_count', type: 'int', nullable: true, default: 0 })
+    reportCount: number;
+
     @Column({ name: 'created_at', type: 'timestamp', nullable: true, default: () => 'CURRENT_TIMESTAMP' })
     createdAt: Date;
 
@@ -63,7 +66,7 @@ export class Post {
     @Column({ name: 'topic', type: 'varchar', length: 100, nullable: true })
     topic: string | null;
 
-    @Column({ name: 'status', type: 'enum', enum: ['PENDING', 'ACTIVE', 'DELETED', 'BLOCKED', 'REPORTED'], default: 'ACTIVE' })
+    @Column({ name: 'status', type: 'enum', enum: ['PENDING', 'ACTIVE', 'DELETED', 'BLOCKED'], default: 'ACTIVE' })
     status: string;
 
     @ManyToOne(() => Stock, stock => stock.posts)

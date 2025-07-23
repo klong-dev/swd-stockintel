@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { MoreThan, Repository } from 'typeorm';
 import { RedisService } from 'src/modules/redis/redis.service';
 import { Post } from '../post/entities/post.entity';
 import { CreatePostDto } from '../post/dto/create-post.dto';
@@ -332,27 +332,21 @@ export class AdminService {
 
     async getReportedPosts(page: number = 1, pageSize: number = 10): Promise<{ error: boolean; data: any; message: string }> {
         try {
-            const [posts, total] = await this.postRepository.createQueryBuilder('post')
-                .leftJoinAndSelect('post.expert', 'expert')
-                .leftJoinAndSelect('post.stock', 'stock')
-                .leftJoinAndSelect('post.reports', 'reports')
-                .leftJoinAndSelect('reports.user', 'reportUser')
-                .where('reports.reportId IS NOT NULL')
-                .orderBy('post.createdAt', 'DESC')
-                .skip((page - 1) * pageSize)
-                .take(pageSize)
-                .getManyAndCount();
-
-            const result = {
-                posts,
-                pagination: {
-                    page,
-                    pageSize,
-                    total,
-                    totalPages: Math.ceil(total / pageSize),
-                },
-            };
-
+            const posts = await this.postRepository.find({
+                where: { reportCount: MoreThan(0) },
+                relations: ['expert'],
+                order: { reportCount: 'DESC' },
+                skip: (page - 1) * pageSize,
+                take: pageSize,
+            });
+            if (!posts || posts.length === 0) {
+                return {
+                    error: true,
+                    data: null,
+                    message: 'No reported posts found',
+                };
+            }
+            const result = paginate(posts, page, pageSize);
             return {
                 error: false,
                 data: result,
@@ -398,6 +392,56 @@ export class AdminService {
                 error: true,
                 data: null,
                 message: e.message || 'Failed to fetch blocked posts',
+            };
+        }
+    }
+
+    async rejectPostReport(id: number): Promise<{ error: boolean; data: any; message: string }> {
+        try {
+            const post = await this.postRepository.findOne({
+                where: { postId: id },
+                relations: ['reports']
+            });
+
+            if (!post) {
+                return {
+                    error: true,
+                    data: null,
+                    message: 'Post not found',
+                };
+            }
+
+            if (post.reportCount === 0) {
+                return {
+                    error: true,
+                    data: null,
+                    message: 'Post has no reports to reject',
+                };
+            }
+
+            // Reset report count to zero
+            await this.postRepository.update(id, { reportCount: 0 });
+            const updatedPost = await this.postRepository.findOne({
+                where: { postId: id },
+                relations: ['expert', 'stock'],
+            });
+
+            await this.reportRepository.delete({ postId: id });
+
+            // Clear cache
+            await this.removeFromCache(`admin:post:${id}`);
+            await this.removeFromCache('admin:posts:all*');
+
+            return {
+                error: false,
+                data: updatedPost,
+                message: 'Post reports rejected successfully',
+            };
+        } catch (e) {
+            return {
+                error: true,
+                data: null,
+                message: e.message || 'Failed to reject post reports',
             };
         }
     }
