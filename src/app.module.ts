@@ -20,6 +20,8 @@ import { CloudinaryModule } from './modules/cloudinary/cloudinary.module';
 import { TagModule } from './modules/tag/tag.module';
 import { NewsModule } from './modules/news/news.module';
 import { PodcastModule } from './modules/podcast/podcast.module';
+import { HttpModule } from '@nestjs/axios';
+import { AiModule } from './modules/ai/ai.module';
 
 
 @Module({
@@ -32,6 +34,7 @@ import { PodcastModule } from './modules/podcast/podcast.module';
       inject: [ConfigService],
       useFactory: async (configService: ConfigService) => configService.get('typeorm'),
     }),
+    HttpModule,
     AuthModule,
     AdminModule,
     CommentModule,
@@ -47,7 +50,8 @@ import { PodcastModule } from './modules/podcast/podcast.module';
     CloudinaryModule,
     TagModule,
     NewsModule,
-    PodcastModule
+    PodcastModule,
+    AiModule
   ],
   controllers: [AppController],
   providers: [AppService],
